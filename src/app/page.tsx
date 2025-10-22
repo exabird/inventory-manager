@@ -31,6 +31,24 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  const loadProducts = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      console.log('🔄 Chargement des produits...');
+      const data = await ProductService.getAll();
+      console.log('✅ Produits charges:', data.length, data);
+      setProducts(data);
+      setFilteredProducts(data);
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des produits:', error);
+      setProducts([]);
+      setFilteredProducts([]);
+    } finally {
+      setIsLoading(false);
+      console.log('✅ isLoading mis a false');
+    }
+  }, []);
+
   // Charger les produits au montage
   useEffect(() => {
     console.log('🚀 useEffect montage - Appel de loadProducts()');
@@ -53,24 +71,6 @@ export default function Home() {
       setFilteredProducts(filtered);
     }
   }, [searchQuery, products]);
-
-  const loadProducts = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      console.log('🔄 Chargement des produits...');
-      const data = await ProductService.getAll();
-      console.log('✅ Produits charges:', data.length, data);
-      setProducts(data);
-      setFilteredProducts(data);
-    } catch (error) {
-      console.error('❌ Erreur lors du chargement des produits:', error);
-      setProducts([]);
-      setFilteredProducts([]);
-    } finally {
-      setIsLoading(false);
-      console.log('✅ isLoading mis a false');
-    }
-  }, []);
 
   const handleScanSuccess = async (barcode: string) => {
     try {
