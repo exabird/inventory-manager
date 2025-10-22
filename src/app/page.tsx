@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Camera, Package, Loader2 } from 'lucide-react';
+import { Search, Plus, Camera, Package, Loader2, Grid3X3, List, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Product } from '@/lib/supabase';
 import { ProductService } from '@/lib/services';
 import ProductCard from '@/components/inventory/ProductCard';
+import ProductListItem from '@/components/inventory/ProductListItem';
 import ProductForm from '@/components/inventory/ProductForm';
 import BarcodeScanner from '@/components/scanner/BarcodeScanner';
 import { APP_VERSION } from '@/lib/version';
@@ -31,6 +32,8 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'low-stock' | 'out-of-stock' | 'in-stock'>('all');
 
   const loadProducts = useCallback(async () => {
     try {
@@ -56,22 +59,41 @@ export default function Home() {
     loadProducts();
   }, [loadProducts]);
 
-  // Filtrer les produits lors de la recherche
+  // Filtrer les produits lors de la recherche et par statut
   useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredProducts(products);
-    } else {
+    let filtered = products;
+
+    // Filtre par recherche textuelle
+    if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      const filtered = products.filter(
+      filtered = filtered.filter(
         (p) =>
           p.name.toLowerCase().includes(query) ||
-          p.barcode.toLowerCase().includes(query) ||
+          p.barcode?.toLowerCase().includes(query) ||
           p.manufacturer?.toLowerCase().includes(query) ||
           p.internal_ref?.toLowerCase().includes(query)
       );
-      setFilteredProducts(filtered);
     }
-  }, [searchQuery, products]);
+
+    // Filtre par statut de stock
+    switch (activeFilter) {
+      case 'low-stock':
+        filtered = filtered.filter(product => product.quantity > 0 && product.quantity < 5);
+        break;
+      case 'out-of-stock':
+        filtered = filtered.filter(product => product.quantity === 0);
+        break;
+      case 'in-stock':
+        filtered = filtered.filter(product => product.quantity >= 5);
+        break;
+      case 'all':
+      default:
+        // Pas de filtre supplémentaire
+        break;
+    }
+
+    setFilteredProducts(filtered);
+  }, [searchQuery, products, activeFilter]);
 
   const handleScanSuccess = async (barcode: string) => {
     try {
@@ -254,7 +276,7 @@ export default function Home() {
           </div>
 
           {/* Barre de recherche */}
-          <div className="relative">
+          <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             <Input
               type="text"
@@ -263,6 +285,63 @@ export default function Home() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
             />
+          </div>
+
+          {/* Filtres et contrôles de vue */}
+          <div className="flex items-center justify-between mb-4">
+            {/* Filtres de statut */}
+            <div className="flex gap-2 overflow-x-auto">
+              <Button
+                variant={activeFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setActiveFilter('all')}
+                className="whitespace-nowrap"
+              >
+                Tous ({products.length})
+              </Button>
+              <Button
+                variant={activeFilter === 'in-stock' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setActiveFilter('in-stock')}
+                className="whitespace-nowrap"
+              >
+                En stock ({products.filter(p => p.quantity >= 5).length})
+              </Button>
+              <Button
+                variant={activeFilter === 'low-stock' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setActiveFilter('low-stock')}
+                className="whitespace-nowrap"
+              >
+                Stock faible ({stats.lowStock})
+              </Button>
+              <Button
+                variant={activeFilter === 'out-of-stock' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setActiveFilter('out-of-stock')}
+                className="whitespace-nowrap"
+              >
+                Rupture ({stats.outOfStock})
+              </Button>
+            </div>
+
+            {/* Contrôles de vue */}
+            <div className="flex gap-1">
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+              >
+                <Grid3X3 className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -338,17 +417,32 @@ export default function Home() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onEdit={handleEditProduct}
-                  onDelete={handleDeleteProduct}
-                  onQuantityChange={handleQuantityChange}
-                />
-              ))}
-            </div>
+            {/* Affichage conditionnel selon le mode de vue */}
+            {viewMode === 'list' ? (
+              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                {filteredProducts.map((product) => (
+                  <ProductListItem
+                    key={product.id}
+                    product={product}
+                    onEdit={handleEditProduct}
+                    onDelete={handleDeleteProduct}
+                    onQuantityChange={handleQuantityChange}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onEdit={handleEditProduct}
+                    onDelete={handleDeleteProduct}
+                    onQuantityChange={handleQuantityChange}
+                  />
+                ))}
+              </div>
+            )}
           </>
         )}
       </div>
