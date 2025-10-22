@@ -191,37 +191,48 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
 
   // Fonction pour choisir le meilleur code-barres
   const selectBestBarcode = (codes: string[]): string => {
-    // Priorité 1 : Codes UPC (12 chiffres) - Standard mondial
+    console.log('📊 Codes détectés:', codes);
+    
+    // Priorité 1 : Codes UPC-A (12 chiffres) - Standard mondial (USA, Canada, etc.)
     const upcCodes = codes.filter(code => /^\d{12}$/.test(code));
     if (upcCodes.length > 0) {
+      console.log('✅ Code UPC-A sélectionné:', upcCodes[0]);
       return upcCodes[0];
     }
 
-    // Priorité 2 : Codes EAN-13 (13 chiffres) - Standard européen
+    // Priorité 2 : Codes EAN-13 (13 chiffres) commençant par 0 (souvent des UPC)
+    const ean13WithZero = codes.filter(code => /^0\d{12}$/.test(code));
+    if (ean13WithZero.length > 0) {
+      console.log('✅ Code EAN-13 (UPC format) sélectionné:', ean13WithZero[0]);
+      return ean13WithZero[0];
+    }
+
+    // Priorité 3 : Autres codes EAN-13 (13 chiffres)
     const ean13Codes = codes.filter(code => /^\d{13}$/.test(code));
     if (ean13Codes.length > 0) {
+      console.log('✅ Code EAN-13 sélectionné:', ean13Codes[0]);
       return ean13Codes[0];
     }
 
-    // Priorité 3 : Codes EAN-8 (8 chiffres) - Codes courts
+    // Priorité 4 : Codes EAN-8 (8 chiffres)
     const ean8Codes = codes.filter(code => /^\d{8}$/.test(code));
     if (ean8Codes.length > 0) {
+      console.log('✅ Code EAN-8 sélectionné:', ean8Codes[0]);
       return ean8Codes[0];
     }
 
-    // Priorité 4 : Codes numériques longs (plus de 8 chiffres)
-    const longNumericCodes = codes.filter(code => /^\d{9,}$/.test(code));
-    if (longNumericCodes.length > 0) {
-      return longNumericCodes[0];
-    }
-
-    // Priorité 5 : Codes numériques courts
-    const numericCodes = codes.filter(code => /^\d+$/.test(code));
-    if (numericCodes.length > 0) {
-      return numericCodes[0];
+    // Priorité 5 : EXCLURE les numéros de série (trop longs ou avec lettres)
+    // Les numéros de série ont souvent plus de 13 chiffres ou contiennent des lettres
+    const standardCodes = codes.filter(code => 
+      /^\d{8,13}$/.test(code) // Seulement les codes entre 8 et 13 chiffres
+    );
+    if (standardCodes.length > 0) {
+      console.log('✅ Code standard sélectionné:', standardCodes[0]);
+      return standardCodes[0];
     }
 
     // En dernier recours, prendre le premier code
+    console.log('⚠️ Aucun code standard, utilisation du premier:', codes[0]);
     return codes[0];
   };
 
