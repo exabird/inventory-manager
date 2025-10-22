@@ -284,48 +284,48 @@ export default function ImageUploader({
               className="w-full h-full object-cover"
             />
             
-            {/* Overlay avec actions */}
-            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+            {/* Overlay avec actions - seulement au hover */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
               <div className="flex gap-1">
                 <Button
                   size="sm"
-                  variant="secondary"
+                  variant="ghost"
                   onClick={(e) => {
                     e.stopPropagation();
                     setFeatured(image.id);
                   }}
-                  className="h-6 w-6 p-0"
+                  className="h-6 w-6 p-0 hover:bg-white/20"
                 >
                   {image.is_featured ? (
-                    <Star className="h-3 w-3 text-yellow-500 fill-current" />
+                    <Star className="h-3 w-3 text-yellow-400 fill-current" />
                   ) : (
-                    <StarOff className="h-3 w-3" />
+                    <StarOff className="h-3 w-3 text-white" />
                   )}
                 </Button>
                 <Button
                   size="sm"
-                  variant="destructive"
+                  variant="ghost"
                   onClick={(e) => {
                     e.stopPropagation();
                     deleteImage(image);
                   }}
-                  className="h-6 w-6 p-0"
+                  className="h-6 w-6 p-0 hover:bg-red-500/20"
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash2 className="h-3 w-3 text-white" />
                 </Button>
               </div>
             </div>
 
-            {/* Indicateur featured */}
+            {/* Indicateur featured - moderne */}
             {image.is_featured && (
               <div className="absolute top-1 left-1">
-                <Star className="h-3 w-3 text-yellow-500 fill-current drop-shadow-sm" />
+                <Star className="h-3 w-3 text-yellow-400 fill-current drop-shadow-lg" />
               </div>
             )}
 
-            {/* Handle de drag */}
-            <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <GripVertical className="h-3 w-3 text-white drop-shadow-sm" />
+            {/* Handle de drag - moderne */}
+            <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <GripVertical className="h-3 w-3 text-white drop-shadow-lg" />
             </div>
           </div>
         ))}
@@ -365,18 +365,6 @@ export default function ImageUploader({
         className="hidden"
       />
 
-      {/* Informations */}
-      <div className="text-xs text-gray-500 text-center">
-        {images.length > 0 && (
-          <span>
-            {images.length} image{images.length > 1 ? 's' : ''} • 
-            {images.find(img => img.is_featured) ? ' Image principale sélectionnée' : ' Aucune image principale'}
-          </span>
-        )}
-        {images.length === 0 && (
-          <span>Glissez-déposez ou cliquez pour ajouter des images</span>
-        )}
-      </div>
     </div>
   );
 }

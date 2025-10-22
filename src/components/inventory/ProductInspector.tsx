@@ -23,7 +23,11 @@ import {
   Truck,
   Globe,
   BarChart3,
-  Camera
+  Camera,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Hash as HashIcon,
+  Edit
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FunctionalInput, FunctionalTextarea, FunctionalSelect } from '@/components/ui/FunctionalFields';
@@ -31,6 +35,7 @@ import { getFieldStatus } from '@/lib/fieldStatus';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import { Product, Category } from '@/lib/supabase';
 import { CategoryService } from '@/lib/services';
 import Tabs, { TabContent } from '@/components/ui/Tabs';
@@ -39,6 +44,7 @@ import BarcodeScanner from '@/components/scanner/BarcodeScanner';
 import ProductThumbnail from '@/components/inventory/ProductThumbnail';
 import { ProductImage } from '@/lib/productImageService';
 import { ProductDetectionService } from '@/lib/productDetectionService';
+import StockTab from '@/components/inventory/StockTab';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,6 +72,8 @@ interface ProductFormData {
   selling_price_htva: number | null;
   purchase_price_htva: number | null;
   warranty_period: string | null;
+  min_stock_required: boolean | null;
+  min_stock_quantity: number | null;
   // Métadonnées étendues
   metadata: {
     supplier?: string | null;
@@ -113,6 +121,9 @@ export default function ProductInspector({
   const [activeTab, setActiveTab] = useState('favorites');
   const [images, setImages] = useState<ProductImage[]>([]);
   const [showScanner, setShowScanner] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [initialFormData, setInitialFormData] = useState<ProductFormData | null>(null);
+  const [showImageGallery, setShowImageGallery] = useState(false);
   const [formData, setFormData] = useState<ProductFormData>({
     barcode: barcode || product?.barcode || '',
     name: product?.name || '',
@@ -128,6 +139,8 @@ export default function ProductInspector({
         selling_price_htva: product?.selling_price_htva || null,
         purchase_price_htva: product?.purchase_price_htva || null,
         warranty_period: product?.warranty_period || '',
+        min_stock_required: product?.min_stock_required || false,
+        min_stock_quantity: product?.min_stock_quantity || 0,
     metadata: {
       supplier: (product?.metadata as any)?.supplier || '',
       location: (product?.metadata as any)?.location || '',
@@ -172,7 +185,7 @@ export default function ProductInspector({
   // Mettre à jour formData quand le produit change
   useEffect(() => {
     if (product) {
-      setFormData({
+      const initialData = {
         barcode: product.barcode || '',
         name: product.name || '',
         manufacturer: product.manufacturer || '',
@@ -181,12 +194,14 @@ export default function ProductInspector({
         category_id: product.category_id || '',
         image_url: product.image_url || '',
         notes: product.notes || '',
-          manufacturer_ref: product.manufacturer_ref || '',
-          brand: product.brand || '',
-          short_description: product.short_description || '',
-          selling_price_htva: product.selling_price_htva || null,
-          purchase_price_htva: product.purchase_price_htva || null,
-          warranty_period: product.warranty_period || '',
+        manufacturer_ref: product.manufacturer_ref || '',
+        brand: product.brand || '',
+        short_description: product.short_description || '',
+        selling_price_htva: product.selling_price_htva || null,
+        purchase_price_htva: product.purchase_price_htva || null,
+        warranty_period: product.warranty_period || '',
+        min_stock_required: product.min_stock_required || false,
+        min_stock_quantity: product.min_stock_quantity || 0,
         metadata: {
           supplier: (product.metadata as any)?.supplier || '',
           location: (product.metadata as any)?.location || '',
@@ -208,9 +223,21 @@ export default function ProductInspector({
           stock_history: (product.metadata as any)?.stock_history || [],
           internal_notes: (product.metadata as any)?.internal_notes || '',
         },
-      });
+      };
+      
+      setFormData(initialData);
+      setInitialFormData(initialData);
+      setHasChanges(false);
     }
   }, [product]);
+
+  // Détecter les modifications en temps réel
+  useEffect(() => {
+    if (initialFormData) {
+      const hasModifications = checkForChanges(formData);
+      setHasChanges(hasModifications);
+    }
+  }, [formData, initialFormData]);
 
   const handleInputChange = (field: keyof ProductFormData, value: string | number) => {
     setFormData(prev => ({
@@ -225,6 +252,51 @@ export default function ProductInspector({
         return newErrors;
       });
     }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && hasChanges) {
+      e.preventDefault();
+      handleFormSubmit(e as any);
+    }
+  };
+
+  const handleStockUpdate = (newQuantity: number) => {
+    // Mettre à jour la quantité dans le formulaire
+    setFormData(prev => ({
+      ...prev,
+      quantity: newQuantity
+    }));
+    
+    // Mettre à jour le produit localement si nécessaire
+    if (product) {
+      // Cette fonction sera appelée par le StockTab pour synchroniser les données
+    }
+  };
+
+  // Fonction pour détecter les modifications
+  const checkForChanges = (currentData: ProductFormData) => {
+    if (!initialFormData) return false;
+    
+    // Comparer les champs principaux
+    const mainFields: (keyof ProductFormData)[] = [
+      'barcode', 'name', 'manufacturer', 'internal_ref', 'quantity',
+      'category_id', 'image_url', 'notes', 'manufacturer_ref', 'brand',
+      'short_description', 'selling_price_htva', 'purchase_price_htva', 'warranty_period'
+    ];
+    
+    for (const field of mainFields) {
+      if (currentData[field] !== initialFormData[field]) {
+        return true;
+      }
+    }
+    
+    // Comparer les métadonnées
+    if (JSON.stringify(currentData.metadata) !== JSON.stringify(initialFormData.metadata)) {
+      return true;
+    }
+    
+    return false;
   };
 
   const handleBarcodeScanned = async (scannedBarcode: string) => {
@@ -315,6 +387,8 @@ export default function ProductInspector({
       selling_price_htva: formData.selling_price_htva,
       purchase_price_htva: formData.purchase_price_htva,
       warranty_period: formData.warranty_period,
+      min_stock_required: formData.min_stock_required,
+      min_stock_quantity: formData.min_stock_quantity,
       metadata: {
         ...formData.metadata,
         supplier: formData.metadata?.supplier || null,
@@ -413,19 +487,6 @@ export default function ProductInspector({
         return (
           <TabContent>
             <div className="space-y-6">
-              {/* Images produit */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4" />
-                  Images produit
-                </h3>
-                <ImageUploader
-                  productId={product?.id}
-                  images={images}
-                  onImagesChange={setImages}
-                />
-              </div>
-
               {/* Informations de base */}
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide flex items-center gap-2">
@@ -441,6 +502,7 @@ export default function ProductInspector({
                       label="Nom du produit *"
                       value={formData.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
+                      onKeyDown={handleKeyDown}
                       placeholder="Ex: iPhone 15 Pro"
                       status={getFieldStatus('name')}
                       error={validationErrors.name}
@@ -453,6 +515,7 @@ export default function ProductInspector({
                     label="Référence fabricant"
                     value={formData.manufacturer_ref || ''}
                     onChange={(e) => handleInputChange('manufacturer_ref', e.target.value)}
+                    onKeyDown={handleKeyDown}
                     placeholder="REF-FAB-001"
                     status={getFieldStatus('manufacturer_ref')}
                   />
@@ -463,6 +526,7 @@ export default function ProductInspector({
                     label="Référence interne *"
                     value={formData.internal_ref || ''}
                     onChange={(e) => handleInputChange('internal_ref', e.target.value)}
+                    onKeyDown={handleKeyDown}
                     placeholder="REF-INT-001"
                     status={getFieldStatus('internal_ref')}
                     error={validationErrors.internal_ref}
@@ -470,45 +534,54 @@ export default function ProductInspector({
 
                   {/* Code-barres */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor="barcode" className="flex items-center gap-1.5">
-                        <Barcode className="h-3.5 w-3.5" />
-                        Code-barres (SKU)
-                      </Label>
+                    <Label htmlFor="barcode" className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <Barcode className="h-4 w-4" />
+                      Code-barres (SKU)
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="barcode"
+                        value={formData.barcode || ''}
+                        onChange={(e) => handleInputChange('barcode', e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="1234567890123"
+                        className="pr-10 h-10"
+                      />
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={() => setShowScanner(true)}
-                        className="h-6 w-6 p-0"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100 rounded-md"
                         title="Scanner le code-barres"
                       >
-                        <Camera className="h-3 w-3" />
+                        <Camera className="h-4 w-4 text-gray-500" />
                       </Button>
                     </div>
-                    <FunctionalInput
-                      id="barcode"
-                      label=""
-                      value={formData.barcode || ''}
-                      onChange={(e) => handleInputChange('barcode', e.target.value)}
-                      placeholder="1234567890123"
-                      status={getFieldStatus('barcode')}
-                    />
                   </div>
 
                   {/* Marque */}
-                  <FunctionalInput
-                    id="brand"
-                    label="Marque"
-                    value={formData.brand || ''}
-                    onChange={(e) => handleInputChange('brand', e.target.value)}
-                    placeholder="Ex: Apple"
-                    status={getFieldStatus('brand')}
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="brand" className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <Building2 className="h-4 w-4" />
+                      Marque
+                    </Label>
+                    <Input
+                      id="brand"
+                      value={formData.brand || ''}
+                      onChange={(e) => handleInputChange('brand', e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Apple, Samsung, etc."
+                      className="h-10"
+                    />
+                  </div>
 
                   {/* Catégorie */}
                   <div className="col-span-2 space-y-2">
-                    <Label htmlFor="category_id">Catégorie</Label>
+                    <Label htmlFor="category_id" className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <Tag className="h-4 w-4" />
+                      Catégorie
+                    </Label>
                     {isLoadingCategories ? (
                       <div className="flex items-center justify-center py-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -518,6 +591,7 @@ export default function ProductInspector({
                         id="category_id"
                         value={formData.category_id || ''}
                         onChange={(e) => handleInputChange('category_id', e.target.value)}
+                        onKeyDown={handleKeyDown}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">Aucune catégorie</option>
@@ -531,27 +605,37 @@ export default function ProductInspector({
                   </div>
 
                   {/* Description courte */}
-                  <div className="col-span-2">
-                    <FunctionalTextarea
+                  <div className="col-span-2 space-y-2">
+                    <Label htmlFor="short_description" className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <FileText className="h-4 w-4" />
+                      Description courte
+                    </Label>
+                    <textarea
                       id="short_description"
-                      label="Description courte"
                       value={formData.short_description || ''}
                       onChange={(e) => handleInputChange('short_description', e.target.value)}
+                      onKeyDown={handleKeyDown}
                       placeholder="Description courte du produit..."
                       rows={3}
-                      status={getFieldStatus('short_description')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                     />
                   </div>
 
                   {/* Période de garantie */}
-                  <FunctionalInput
-                    id="warranty_period"
-                    label="Période de garantie"
-                    value={formData.warranty_period || ''}
-                    onChange={(e) => handleInputChange('warranty_period', e.target.value)}
-                    placeholder="Ex: 2 ans"
-                    status={getFieldStatus('warranty_period')}
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="warranty_period" className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <Calendar className="h-4 w-4" />
+                      Période de garantie
+                    </Label>
+                    <Input
+                      id="warranty_period"
+                      value={formData.warranty_period || ''}
+                      onChange={(e) => handleInputChange('warranty_period', e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="2 ans, 24 mois, etc."
+                      className="h-10"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -564,28 +648,40 @@ export default function ProductInspector({
                 
                 <div className="grid grid-cols-2 gap-4">
                   {/* Prix d'achat HTVA */}
-                  <FunctionalInput
-                    id="purchase_price_htva"
-                    label="Prix d'achat HTVA (€)"
-                    type="number"
-                    step="0.01"
-                    value={formData.purchase_price_htva || ''}
-                    onChange={(e) => handleInputChange('purchase_price_htva', parseFloat(e.target.value))}
-                    placeholder="0.00"
-                    status={getFieldStatus('purchase_price_htva')}
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="purchase_price_htva" className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <ArrowDownToLine className="h-4 w-4 text-blue-600" />
+                      Prix d'achat HTVA (€)
+                    </Label>
+                    <Input
+                      id="purchase_price_htva"
+                      type="number"
+                      step="0.01"
+                      value={formData.purchase_price_htva || ''}
+                      onChange={(e) => handleInputChange('purchase_price_htva', parseFloat(e.target.value))}
+                      onKeyDown={handleKeyDown}
+                      placeholder="0.00"
+                      className="h-10"
+                    />
+                  </div>
 
                   {/* Prix de vente HTVA */}
-                  <FunctionalInput
-                    id="selling_price_htva"
-                    label="Prix de vente HTVA (€)"
-                    type="number"
-                    step="0.01"
-                    value={formData.selling_price_htva || ''}
-                    onChange={(e) => handleInputChange('selling_price_htva', parseFloat(e.target.value))}
-                    placeholder="0.00"
-                    status={getFieldStatus('selling_price_htva')}
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="selling_price_htva" className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <ArrowUpFromLine className="h-4 w-4 text-emerald-600" />
+                      Prix de vente HTVA (€)
+                    </Label>
+                    <Input
+                      id="selling_price_htva"
+                      type="number"
+                      step="0.01"
+                      value={formData.selling_price_htva || ''}
+                      onChange={(e) => handleInputChange('selling_price_htva', parseFloat(e.target.value))}
+                      onKeyDown={handleKeyDown}
+                      placeholder="0.00"
+                      className="h-10"
+                    />
+                  </div>
                 </div>
 
                 {/* Marge calculée */}
@@ -610,45 +706,10 @@ export default function ProductInspector({
       case 'stock':
         return (
           <TabContent>
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                {/* Quantité */}
-                <div className="space-y-2">
-                  <Label htmlFor="quantity">Quantité en stock</Label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    value={formData.quantity}
-                    onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 0)}
-                    placeholder="0"
-                    min="0"
-                    className={validationErrors.quantity ? 'border-red-500' : ''}
-                  />
-                </div>
-
-                {/* SKU */}
-                <div className="space-y-2">
-                  <Label htmlFor="sku">SKU</Label>
-                  <Input
-                    id="sku"
-                    value={formData.metadata?.sku || ''}
-                    onChange={(e) => handleMetadataChange('sku', e.target.value)}
-                    placeholder="SKU-001"
-                  />
-                </div>
-
-                {/* Emplacement */}
-                <div className="col-span-2 space-y-2">
-                  <Label htmlFor="location">Emplacement</Label>
-                  <Input
-                    id="location"
-                    value={formData.metadata?.location || ''}
-                    onChange={(e) => handleMetadataChange('location', e.target.value)}
-                    placeholder="Ex: Rayon A, Étagère 3"
-                  />
-                </div>
-              </div>
-            </div>
+            <StockTab 
+              product={product!} 
+              onStockUpdate={handleStockUpdate}
+            />
           </TabContent>
         );
 
@@ -677,6 +738,7 @@ export default function ProductInspector({
                     step="0.01"
                     value={formData.purchase_price_htva || ''}
                     onChange={(e) => handleInputChange('purchase_price_htva', parseFloat(e.target.value))}
+                    onKeyDown={handleKeyDown}
                     placeholder="0.00"
                   />
                 </div>
@@ -834,6 +896,7 @@ export default function ProductInspector({
                     id="short_description_ref"
                     value={formData.short_description || ''}
                     onChange={(e) => handleInputChange('short_description', e.target.value)}
+                    onKeyDown={handleKeyDown}
                     placeholder="Description courte du produit..."
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -865,131 +928,182 @@ export default function ProductInspector({
   return (
     <>
       <div className="fixed inset-y-0 right-0 w-full md:w-[500px] lg:w-[600px] bg-white shadow-2xl z-50 flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-50 to-blue-100">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-600 rounded-lg">
-              <Package className="h-5 w-5 text-white" />
-            </div>
-            <div className="flex items-center gap-3">
-              {product && (
+        {/* Header plein compact */}
+        <div className="p-4 h-[100px] flex-shrink-0 border-b bg-white">
+          <div className="flex items-center gap-3 h-full">
+            {/* Image produit avec hover modifier */}
+            {product && (
+              <div className="relative group cursor-pointer" onClick={() => setShowImageGallery(!showImageGallery)}>
                 <ProductThumbnail 
                   productId={product.id} 
-                  size="md" 
-                  className="border-2 border-white shadow-sm"
+                  size="lg" 
+                  className="rounded-lg flex-shrink-0"
                 />
-              )}
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">
-                  {product ? product.name : 'Nouveau produit'}
-                </h2>
-                <div className="flex items-center gap-3 mt-1">
-                  {product?.manufacturer_ref && (
-                    <p className="text-sm text-gray-600">
-                      Ref: {product.manufacturer_ref}
-                    </p>
-                  )}
-                        <Badge 
-                          variant={product?.quantity === 0 ? 'destructive' : 
-                                  (product?.quantity || 0) < 5 ? 'secondary' : 'default'}
-                          className="text-xs font-medium"
-                        >
-                          {product?.quantity === 0 ? 'Rupture' : 
-                           (product?.quantity || 0) < 5 ? 'Stock faible' : 'En stock'}
-                        </Badge>
-                        <span className="text-sm font-semibold text-gray-700">
-                          {product?.quantity || 0} unités
-                        </span>
+                {/* Icône modifier au hover */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Edit className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg" />
                 </div>
               </div>
+            )}
+            
+            {/* Infos principales */}
+            <div className="flex-1 min-w-0 h-full flex flex-col justify-between">
+              {/* Ligne 1: Nom du produit */}
+              <h2 className="text-lg font-bold text-gray-900 truncate">
+                {product ? product.name : 'Nouveau produit'}
+              </h2>
+              
+              {/* Ligne 2: Référence fabricant */}
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-gray-400">
+                  {product?.manufacturer_ref || 'Aucune référence'}
+                </span>
+              </div>
+              
+              {/* Ligne 3: Stock et Prix - Extensible */}
+              <div className="flex items-center gap-4">
+                {/* Stock */}
+                <div className="flex items-center gap-1">
+                  <Package className="h-3 w-3 text-gray-400" />
+                  <span className="text-xs text-gray-400">
+                    {(product?.quantity || 0)}
+                  </span>
+                </div>
+                
+                {/* Prix de vente */}
+                {formData.selling_price_htva && (
+                  <div className="flex items-center gap-1">
+                    <ArrowUpFromLine className="h-3 w-3 text-gray-400" />
+                    <span className="text-xs text-gray-400">
+                      {formData.selling_price_htva.toFixed(2)}€
+                    </span>
+                  </div>
+                )}
+                
+                {/* Prix d'achat */}
+                {formData.purchase_price_htva && (
+                  <div className="flex items-center gap-1">
+                    <ArrowDownToLine className="h-3 w-3 text-gray-400" />
+                    <span className="text-xs text-gray-400">
+                      {formData.purchase_price_htva.toFixed(2)}€
+                    </span>
+                  </div>
+                )}
+                
+                {/* Zone extensible pour autres infos */}
+                {/* Exemple: Catégorie */}
+                {formData.category_id && (
+                  <div className="flex items-center gap-1">
+                    <Tag className="h-3 w-3 text-gray-400" />
+                    <span className="text-xs text-gray-400">
+                      {categories.find(cat => cat.id === formData.category_id)?.name || 'Catégorie'}
+                    </span>
+                  </div>
+                )}
+                
+                {/* Exemple: Marque */}
+                {formData.brand && (
+                  <div className="flex items-center gap-1">
+                    <Building2 className="h-3 w-3 text-gray-400" />
+                    <span className="text-xs text-gray-400">
+                      {formData.brand}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Boutons d'action dans le header */}
+            <div className="flex items-start gap-2">
+              {/* Bouton supprimer */}
+              {product && onDelete && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowDeleteDialog(true)}
+                  disabled={isLoading}
+                  className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  title="Supprimer ce produit"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+              
+              {/* Bouton fermer */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                disabled={isLoading}
+                className="h-8 w-8"
+                title="Fermer"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="h-8 w-8 p-0"
-          >
-            <X className="h-5 w-5" />
-          </Button>
+        </div>
+
+        {/* Galerie d'images avec animation */}
+        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+          showImageGallery ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+        }`}>
+          <div className="p-4 border-b bg-gray-50">
+            <div className="flex justify-end mb-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowImageGallery(false)}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+            <ImageUploader
+              productId={product?.id}
+              images={images}
+              onImagesChange={setImages}
+            />
+          </div>
         </div>
 
         {/* Onglets */}
-        <div className="px-6">
+        <div className="px-4 border-b">
           <Tabs 
             tabs={tabs} 
             activeTab={activeTab} 
             onTabChange={setActiveTab}
+            className="border-b-0"
           />
         </div>
 
         {/* Content - Scrollable */}
         <form onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto">
-          <div className="p-6">
-            {/* Status Badge */}
-            {product && (
-              <div className="flex items-center gap-2 mb-6">
-                <Badge className={`${stockStatus.color} px-3 py-1 text-sm font-medium`}>
-                  <StatusIcon className="h-3 w-3 mr-1" />
-                  {stockStatus.label}
-                </Badge>
-                {formData.quantity > 0 && (
-                  <span className="text-sm text-gray-600">
-                    {formData.quantity} unité{formData.quantity > 1 ? 's' : ''} disponible{formData.quantity > 1 ? 's' : ''}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Contenu des onglets */}
+          <div className="p-4">
             {renderTabContent()}
           </div>
         </form>
 
-        {/* Footer - Actions */}
-        <div className="p-4 border-t bg-gray-50 space-y-3">
-          {product && onDelete && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowDeleteDialog(true)}
-              disabled={isLoading}
-              className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Supprimer ce produit
-            </Button>
-          )}
-          
-          <div className="flex gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isLoading}
-              className="flex-1"
-            >
-              Annuler
-            </Button>
+        {/* Bouton enregistrer flottant - seulement si modifications */}
+        {hasChanges && (
+          <div className="fixed bottom-6 right-6 z-50">
             <Button 
               onClick={handleFormSubmit}
               disabled={isLoading} 
-              className="flex-1"
+              size="icon"
+              className="h-12 w-12 bg-blue-600 hover:bg-blue-700 shadow-lg"
+              title={product ? 'Mettre à jour' : 'Ajouter'}
             >
               {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Enregistrement...
-                </>
+                <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  {product ? 'Mettre à jour' : 'Ajouter'}
-                </>
+                <Save className="h-5 w-5" />
               )}
             </Button>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Overlay */}

@@ -47,6 +47,8 @@ export interface Product {
   selling_price_htva: number | null;
   purchase_price_htva: number | null;
   warranty_period: string | null;
+  min_stock_required: boolean | null;
+  min_stock_quantity: number | null;
 }
 
 export interface Category {

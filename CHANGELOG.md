@@ -1,5 +1,156 @@
 # Changelog
 
+## [0.1.13] - 2025-01-22
+
+### 🎨 Refonte complète du wizard de stock - Design system Shadcn
+**Amélioration majeure de l'interface utilisateur du wizard de gestion de stock**
+
+#### Interface de saisie de quantité optimisée :
+- ✅ **Boutons +/- rapprochés** : Gap réduit à 2px pour une interface plus compacte
+- ✅ **Bouton - gris** : `variant="secondary"` au lieu de rouge destructif
+- ✅ **Valeur par défaut 1** : Initialisation à 1 au lieu de 0 (plus logique)
+- ✅ **Limite 999** : Validation côté client et serveur
+- ✅ **Saisie directe** : Champ se vide au focus pour éviter la concaténation
+- ✅ **Pas de sélection bleue** : `userSelect: 'none'` + `caretColor: 'transparent'`
+- ✅ **Pas de flèches** : Suppression des spinners avec CSS `appearance-none`
+
+#### Interface épurée et moderne :
+- ✅ **Suppression des Cards** : Design fluide sans containers inutiles
+- ✅ **Suppression des raccourcis** : Interface focalisée sur l'essentiel
+- ✅ **Bouton notes discret** : `variant="ghost"` avec hover noir
+- ✅ **Navigation cohérente** : Boutons "Précédent" centrés et discrets sur toutes les étapes
+- ✅ **Design system respecté** : Utilisation des variables CSS Shadcn (primary, secondary, muted)
+
+#### Composants Shadcn/Radix UI :
+- ✅ **Tous les boutons** : Composant Shadcn Button au lieu de balises HTML natives
+- ✅ **Input de quantité** : Composant Shadcn Input avec toutes les props
+- ✅ **Textarea notes** : Composant Shadcn Textarea
+- ✅ **Labels** : Composant Shadcn Label pour l'accessibilité
+- ✅ **Design system cohérent** : Toute l'interface utilise les composants Shadcn
+
+#### Raccourcis et boutons :
+- ✅ **Raccourcis bleus** : Composants Button 1, 5, 10, 25, 50 en dégradé bleu
+- ✅ **Bouton Continuer** : Composant Button en dégradé bleu-violet
+- ✅ **Bouton Ajouter note** : Composant Button variant outline avec bordure pointillée
+- ✅ **États désactivés** : Bouton - gris quand quantité = 0
+
+#### Interface optimisée :
+- **Mobile-first** : Parfaitement adapté au tactile avec grands boutons
+- **Effets visuels** : Ombres portées, dégradés, animations
+- **Design moderne** : Couleurs vives et dégradés au lieu de gris basique
+- **Responsive** : Adaptation automatique mobile/desktop
+- **Alignement parfait** : Valeur centrée verticalement entre les boutons
+
+#### Résultat :
+- ⚡ Saisie ultra-rapide avec les raccourcis
+- 👆 Expérience tactile optimale sur mobile
+- 🎯 Moins d'erreurs grâce aux contrôles visuels
+- 🚀 Workflow accéléré pour les opérations courantes
+- 🎨 Design system professionnel avec Shadcn/Radix UI
+- 👁️ Valeur numérique claire sans bordure distrayante
+- ⚖️ Équilibre visuel parfait avec boutons D/D inversé
+
+### 📚 Documentation :
+- ✅ Guide de test mis à jour (`STOCK_WIZARD_UX_FIX_GUIDE.md`)
+- ✅ Nouveaux tests pour l'interface de quantité
+- ✅ Checklist de validation étendue
+- ✅ Version mise à jour : 0.1.13
+
+---
+
+## [0.1.12] - 2024-12-19
+
+### 🎯 Nouvelle fonctionnalité majeure : Gestion de Stock Complète
+
+**Système complet de gestion de stock avec historique et traçabilité**
+
+#### Architecture de base de données :
+- ✅ **Table stock_operations** : Historique complet de toutes les modifications
+- ✅ **Table stock_reasons** : 18 raisons prédéfinies pour les opérations (ajouts, retraits, ajustements)
+- ✅ **Colonnes ajoutées** : min_stock_required, min_stock_quantity dans products
+
+#### Services TypeScript :
+- ✅ **StockService complet** : Gestion centralisée des opérations de stock
+- ✅ **Méthodes disponibles** :
+  - addStock() : Ajouter du stock avec raison
+  - removeStock() : Retirer du stock avec raison
+  - updateQuantity() : Modifier directement la quantité
+  - getOperationsByProduct() : Récupérer l'historique
+  - updateMinStockSettings() : Configurer les alertes
+
+#### Interface utilisateur :
+- ✅ **Onglet Stock** : Interface complète dans le ProductInspector
+- ✅ **Modification directe** : Champ numérique avec validation en temps réel
+- ✅ **Boutons d'action rapide** : Ajouter / Retirer / Définir
+- ✅ **Modals contextuels** : Formulaires avec raison et notes
+- ✅ **Stock minimum** : Toggle et configuration des alertes
+- ✅ **Badge d'alerte** : "Stock bas" quand stock ≤ minimum
+
+#### Historique complet :
+- ✅ **Log chronologique** : Toutes les modifications de la plus récente à la plus ancienne
+- ✅ **Informations détaillées** :
+  - Type d'opération (icônes colorées : vert/rouge/bleu)
+  - Quantité avant → après
+  - Raison sélectionnée
+  - Notes supplémentaires
+  - Date et heure précises
+  - Utilisateur (préparé pour future implémentation)
+
+#### Raisons prédéfinies PME :
+**Ajouts de stock :**
+- Réception commande (livraison fournisseur)
+- Retour client
+- Correction inventaire
+- Réparation terminée
+- Stock promotionnel
+
+**Retraits de stock :**
+- Intervention client (sortie sur site)
+- Vente directe
+- Casse/Défaut
+- Expédition client
+- Envoi réparation
+- Usage interne
+- Correction inventaire
+
+**Ajustements :**
+- Erreur de comptage
+- Réconciliation
+- Transfert
+
+**Définition directe :**
+- Inventaire complet
+- Initialisation
+
+#### Fonctionnalités avancées :
+- ✅ **Validation en temps réel** : Empêche les quantités négatives
+- ✅ **Messages d'erreur clairs** : Gestion complète des erreurs
+- ✅ **Logs détaillés** : Console logs pour le débogage (🔄, ✅, ❌)
+- ✅ **Synchronisation** : Mise à jour automatique du header et de la liste
+- ✅ **Performance optimisée** : Chargement rapide de l'historique
+
+#### Documentation :
+- ✅ **Guide de test complet** : STOCK_TESTING_GUIDE.md avec 10 scénarios de test
+- ✅ **Checklist de validation** : Tous les cas d'usage couverts
+
+### 🔧 Corrections
+- **StockService.updateQuantity** : Correction du calcul de quantity_change pour l'opération 'set'
+- **handleOperationSuccess** : Récupération correcte de la quantité après une opération
+- **Gestion des erreurs** : Messages d'erreur plus explicites dans les modals
+
+### 📦 Nouveaux composants
+- **StockTab.tsx** : Composant principal pour l'onglet de gestion de stock
+- **StockOperationModal** : Modal pour les opérations (add/remove/set)
+- **Switch.tsx** : Composant toggle pour les paramètres
+- **StockService.ts** : Service centralisé pour les opérations de stock
+
+### 🎨 Améliorations UX
+- Interface simple et intuitive adaptée aux PME
+- Icônes colorées pour identifier rapidement les types d'opérations
+- Badges visuels pour les alertes de stock
+- Formulaires avec validation en temps réel
+- Notes optionnelles pour contexte supplémentaire
+
 ## [0.1.11] - 2024-12-19
 
 ### 🔧 Corrections

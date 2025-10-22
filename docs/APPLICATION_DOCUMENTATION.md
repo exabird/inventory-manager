@@ -40,11 +40,18 @@
 - **Actions rapides** : Modification quantité directement dans la liste
 - **Statuts visuels** : Codes couleur pour les quantités
 
-### 4. **Base de Données** 🗄️
+### 4. **Gestion de Stock** 📊
+- **Wizard intuitif** : Interface guidée pour les opérations de stock
+- **3 types d'opérations** : Ajouter, Retirer, Corriger le stock
+- **Raisons prédéfinies** : 17 raisons métier pour traçabilité
+- **Historique complet** : Toutes les opérations enregistrées
+- **Stock minimum** : Alertes configurables
+
+### 5. **Base de Données** 🗄️
 - **Produits** : Informations principales et métadonnées
 - **Catégories** : Classification des produits
 - **Pièces** : Suivi individuel avec numéros de série
-- **Historique** : Traçabilité des modifications
+- **Stock** : Historique et raisons des opérations
 
 ## 🏗️ STRUCTURE DU PROJET
 
@@ -118,6 +125,32 @@ CREATE TABLE pieces (
   notes text,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
+);
+```
+
+### Tables de gestion de stock
+```sql
+-- Historique des opérations de stock
+CREATE TABLE stock_operations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id uuid NOT NULL REFERENCES products(id),
+  operation_type text NOT NULL, -- 'add', 'remove', 'set'
+  quantity_change integer NOT NULL,
+  quantity_before integer NOT NULL,
+  quantity_after integer NOT NULL,
+  reason text NOT NULL,
+  notes text,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Raisons prédéfinies pour les opérations
+CREATE TABLE stock_reasons (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  operation_type text NOT NULL,
+  reason_code text NOT NULL UNIQUE,
+  reason_label text NOT NULL,
+  display_order integer DEFAULT 0,
+  is_active boolean DEFAULT true
 );
 ```
 

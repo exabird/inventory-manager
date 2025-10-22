@@ -30,6 +30,8 @@ interface ProductFormData {
   selling_price_htva: number | null;
   purchase_price_htva: number | null;
   warranty_period: string | null;
+  min_stock_required: boolean | null;
+  min_stock_quantity: number | null;
 }
 import { APP_VERSION } from '@/lib/version';
 
@@ -158,12 +160,27 @@ export default function Home() {
       if (editingProduct) {
         // Mise à jour
         console.log('Mise à jour du produit existant:', editingProduct.id);
-        await ProductService.update(editingProduct.id, data);
-        setSuccessMessage('Produit mis à jour avec succès !');
+        const updatedProduct = await ProductService.update(editingProduct.id, data);
+        
+        if (updatedProduct) {
+          setSuccessMessage('Produit mis à jour avec succès !');
+          
+          // Mettre à jour localement la liste des produits
+          setProducts(prevProducts => 
+            prevProducts.map(product => 
+              product.id === editingProduct.id ? { ...product, ...updatedProduct } : product
+            )
+          );
+          
+          // Mettre à jour le produit en cours d'édition
+          setEditingProduct(updatedProduct);
+        } else {
+          throw new Error('Erreur lors de la mise à jour du produit');
+        }
       } else {
         // Création
         console.log('Création d\'un nouveau produit');
-        await ProductService.create({
+        const newProduct = await ProductService.create({
           ...data,
           barcode: data.barcode || null,
           manufacturer: data.manufacturer || null,
@@ -179,20 +196,34 @@ export default function Home() {
           selling_price_htva: data.selling_price_htva,
           purchase_price_htva: data.purchase_price_htva,
           warranty_period: data.warranty_period,
+          min_stock_required: data.min_stock_required,
+          min_stock_quantity: data.min_stock_quantity,
         });
-        setSuccessMessage('Produit ajouté avec succès !');
+        
+        if (newProduct) {
+          setSuccessMessage('Produit ajouté avec succès !');
+          
+          // Ajouter le nouveau produit à la liste localement
+          setProducts(prevProducts => [newProduct, ...prevProducts]);
+        } else {
+          throw new Error('Erreur lors de la création du produit');
+        }
       }
       
-      // Recharger la liste
-      await loadProducts();
-      
-      // Fermer le formulaire seulement en cas de succès
-      setTimeout(() => {
-        setShowProductForm(false);
-        setScannedBarcode(null);
-        setEditingProduct(null);
-        setSuccessMessage(null);
-      }, 1500); // Délai pour voir le message de succès
+      // Fermer le formulaire seulement pour les nouveaux produits
+      if (!editingProduct) {
+        setTimeout(() => {
+          setShowProductForm(false);
+          setScannedBarcode(null);
+          setEditingProduct(null);
+          setSuccessMessage(null);
+        }, 1500); // Délai pour voir le message de succès
+      } else {
+        // Pour les mises à jour, juste effacer le message de succès après un délai
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 2000);
+      }
       
       console.log('Produit enregistré avec succès');
     } catch (error: unknown) {
@@ -213,7 +244,16 @@ export default function Home() {
   const handleDeleteProduct = async (id: string) => {
     const success = await ProductService.delete(id);
     if (success) {
-      await loadProducts();
+      // Mettre à jour localement la liste des produits
+      setProducts(prevProducts => 
+        prevProducts.filter(product => product.id !== id)
+      );
+      
+      // Fermer la sidebar si le produit supprimé était en cours d'édition
+      if (editingProduct?.id === id) {
+        setShowProductForm(false);
+        setEditingProduct(null);
+      }
     }
   };
 
