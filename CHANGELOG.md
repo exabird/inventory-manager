@@ -8,6 +8,7 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 ## [0.0.20] - 2025-01-22
 
 ### 🐛 Corrections
+- **Correction contrainte NOT NULL** : Suppression de la contrainte NOT NULL sur la colonne `barcode` en base de données
 - **Correction erreur UUID** : Résolution de l'erreur `invalid input syntax for type uuid` lors de la création de produits
 - **Correction TypeScript** : Interface ProductFormData mise à jour pour gérer les valeurs `null`
 - **Correction build Vercel** : Résolution des erreurs de compilation TypeScript
