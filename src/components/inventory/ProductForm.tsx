@@ -110,8 +110,18 @@ export default function ProductForm({
       return;
     }
     
+    // Nettoyer les données avant envoi (convertir les chaînes vides en null)
+    const cleanedData = {
+      ...formData,
+      category_id: formData.category_id || null,
+      manufacturer: formData.manufacturer || null,
+      internal_ref: formData.internal_ref || null,
+      image_url: formData.image_url || null,
+      notes: formData.notes || null,
+    };
+    
     try {
-      await onSubmit(formData);
+      await onSubmit(cleanedData);
     } catch (error) {
       console.error('Erreur lors de la soumission:', error);
     }

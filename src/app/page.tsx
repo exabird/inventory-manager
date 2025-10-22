@@ -128,6 +128,12 @@ export default function Home() {
         console.log('Création d\'un nouveau produit');
         await ProductService.create({
           ...data,
+          barcode: data.barcode || null,
+          manufacturer: data.manufacturer || null,
+          internal_ref: data.internal_ref || null,
+          category_id: data.category_id || null,
+          image_url: data.image_url || null,
+          notes: data.notes || null,
           metadata: {},
         });
         setSuccessMessage('Produit ajouté avec succès !');
