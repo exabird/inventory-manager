@@ -48,3 +48,24 @@
  ✓ Compiled in 16ms
  ✓ Compiled in 11ms
  ✓ Compiled in 10ms
+ ✓ Compiled in 45ms
+ ⨯ ReferenceError: z is not defined
+    at module evaluation (src/components/inventory/ProductForm.tsx:12:23)
+    at module evaluation (src/app/page.tsx:17:1)
+  10 |
+  11 | // Schéma de validation Zod
+> 12 | const productSchema = z.object({
+     |                       ^
+  13 |   barcode: z.string().min(1, 'Le code-barres est requis'),
+  14 |   name: z.string().min(1, 'Le nom est requis').max(500),
+  15 |   manufacturer: z.string().max(255).optional().or(z.literal('')), {
+  digest: '3456319717'
+}
+ GET / 500 in 295ms (compile: 58ms, render: 237ms)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⚠ Fast Refresh had to perform a full reload when ./src/components/inventory/ProductForm.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ✓ Compiled in 12ms
+ GET / 200 in 118ms (compile: 36ms, render: 81ms)
+ ✓ Compiled in 40ms
+ ✓ Compiled in 26ms
