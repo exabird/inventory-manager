@@ -23,9 +23,11 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
   const [showCodeSelection, setShowCodeSelection] = useState(false);
 
   useEffect(() => {
-    // Récupérer la liste des caméras disponibles
-    Html5Qrcode.getCameras()
-      .then((devices) => {
+    // Démarrer automatiquement le scan avec la meilleure caméra
+    const initializeScanner = async () => {
+      try {
+        const devices = await Html5Qrcode.getCameras();
+        
         if (devices && devices.length) {
           setCameras(devices);
           
@@ -46,17 +48,23 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
             device.label.toLowerCase().includes('environment')
           );
           
-          setSelectedCamera(
-            ultraWideBackCamera?.id || 
+          const bestCamera = ultraWideBackCamera?.id || 
             backCamera?.id || 
             rearCamera?.id || 
-            devices[0].id
-          );
+            devices[0].id;
+          
+          setSelectedCamera(bestCamera);
+          
+          // Démarrer automatiquement le scan
+          setTimeout(() => {
+            startScanningWithCamera(bestCamera);
+          }, 500);
+          
         } else {
           setError('Aucune caméra détectée sur votre appareil.');
+          setShowManualInput(true);
         }
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error('Error getting cameras:', err);
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
         const isChrome = /CriOS/.test(navigator.userAgent);
@@ -67,7 +75,10 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
           setError('Impossible d\'accéder à la caméra. Vous pouvez entrer le code manuellement.');
         }
         setShowManualInput(true);
-      });
+      }
+    };
+
+    initializeScanner();
 
     return () => {
       // Nettoyer le scanner lors du démontage
@@ -77,28 +88,23 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
     };
   }, []);
 
-  const startScanning = async () => {
-    if (!selectedCamera) {
-      setError('Veuillez sélectionner une caméra.');
-      return;
-    }
-
+  const startScanningWithCamera = async (cameraId: string) => {
     try {
       setError(null);
       setIsScanning(true);
+      setDetectedCodes([]);
 
       const html5QrCode = new Html5Qrcode('reader');
       scannerRef.current = html5QrCode;
 
       await html5QrCode.start(
-        selectedCamera,
+        cameraId,
         {
-          fps: 10, // Frames par seconde
-          qrbox: { width: 300, height: 300 }, // Zone de scan plus large
+          fps: 10,
+          qrbox: { width: 300, height: 300 },
           aspectRatio: 1.0,
         },
         (decodedText) => {
-          // Succès du scan - détecter plusieurs codes
           console.log('Code détecté:', decodedText);
           
           // Ajouter le code à la liste des codes détectés
@@ -130,7 +136,6 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
         },
         (errorMessage) => {
           // Erreur de scan (normal si rien n'est détecté)
-          // Ne pas afficher car trop verbeux
         }
       );
     } catch (err: any) {
@@ -139,6 +144,14 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       setIsScanning(false);
       setShowManualInput(true);
     }
+  };
+
+  const startScanning = async () => {
+    if (!selectedCamera) {
+      setError('Veuillez sélectionner une caméra.');
+      return;
+    }
+    await startScanningWithCamera(selectedCamera);
   };
 
   const handleManualSubmit = () => {
@@ -150,25 +163,31 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
 
   // Fonction pour choisir le meilleur code-barres
   const selectBestBarcode = (codes: string[]): string => {
-    // Priorité : codes-barres EAN-13 (13 chiffres)
-    const ean13Codes = codes.filter(code => /^\d{13}$/.test(code));
-    if (ean13Codes.length > 0) {
-      return ean13Codes[0];
-    }
-
-    // Priorité : codes-barres UPC-A (12 chiffres)
+    // Priorité 1 : Codes UPC (12 chiffres) - Standard mondial
     const upcCodes = codes.filter(code => /^\d{12}$/.test(code));
     if (upcCodes.length > 0) {
       return upcCodes[0];
     }
 
-    // Priorité : codes-barres EAN-8 (8 chiffres)
+    // Priorité 2 : Codes EAN-13 (13 chiffres) - Standard européen
+    const ean13Codes = codes.filter(code => /^\d{13}$/.test(code));
+    if (ean13Codes.length > 0) {
+      return ean13Codes[0];
+    }
+
+    // Priorité 3 : Codes EAN-8 (8 chiffres) - Codes courts
     const ean8Codes = codes.filter(code => /^\d{8}$/.test(code));
     if (ean8Codes.length > 0) {
       return ean8Codes[0];
     }
 
-    // Sinon, prendre le premier code numérique
+    // Priorité 4 : Codes numériques longs (plus de 8 chiffres)
+    const longNumericCodes = codes.filter(code => /^\d{9,}$/.test(code));
+    if (longNumericCodes.length > 0) {
+      return longNumericCodes[0];
+    }
+
+    // Priorité 5 : Codes numériques courts
     const numericCodes = codes.filter(code => /^\d+$/.test(code));
     if (numericCodes.length > 0) {
       return numericCodes[0];
@@ -234,42 +253,34 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
           className={`w-full max-w-md ${isScanning ? '' : 'hidden'}`}
         ></div>
 
-        {!isScanning && !error && (
+        {/* Bouton de saisie manuelle dans la vue de scan */}
+        {isScanning && (
+          <div className="absolute top-20 right-4">
+            <Button
+              onClick={() => {
+                stopScanning();
+                setShowManualInput(true);
+              }}
+              variant="outline"
+              size="sm"
+              className="bg-white/90 text-black hover:bg-white border-white/20"
+            >
+              📝 Manuel
+            </Button>
+          </div>
+        )}
+
+        {!isScanning && !error && !showCodeSelection && (
           <div className="text-center px-6">
             <div className="mb-6">
               <Camera className="h-24 w-24 text-white/50 mx-auto mb-4" />
               <p className="text-white text-lg mb-2">
-                Prêt à scanner
+                Initialisation du scanner...
               </p>
               <p className="text-white/70 text-sm">
-                Pointez votre caméra vers un code-barres ou QR code
+                Sélection automatique de la caméra ultra grand angle arrière
               </p>
             </div>
-
-            {cameras.length > 1 && (
-              <div className="mb-4">
-                <select
-                  value={selectedCamera || ''}
-                  onChange={(e) => setSelectedCamera(e.target.value)}
-                  className="bg-white/10 text-white border border-white/20 rounded-lg px-4 py-2 w-full max-w-xs"
-                >
-                  {cameras.map((camera) => (
-                    <option key={camera.id} value={camera.id} className="text-black">
-                      {camera.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <Button
-              onClick={startScanning}
-              size="lg"
-              className="bg-white text-black hover:bg-white/90"
-            >
-              <Camera className="h-5 w-5 mr-2" />
-              Démarrer le scan
-            </Button>
 
             {/* Option de saisie manuelle */}
             <div className="mt-4">
@@ -297,6 +308,11 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
               <div className="space-y-2">
                 {detectedCodes.map((code, index) => {
                   const isRecommended = selectBestBarcode(detectedCodes) === code;
+                  const codeType = code.length === 12 ? 'UPC (Recommandé)' : 
+                                 code.length === 13 ? 'EAN-13' : 
+                                 code.length === 8 ? 'EAN-8' : 
+                                 'Autre format';
+                  
                   return (
                     <button
                       key={index}
@@ -311,15 +327,12 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
                         <span className="font-mono text-sm">{code}</span>
                         {isRecommended && (
                           <span className="text-xs bg-green-500 text-white px-2 py-1 rounded">
-                            Recommandé
+                            ⭐ Meilleur choix
                           </span>
                         )}
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
-                        {code.length === 13 ? 'EAN-13' : 
-                         code.length === 12 ? 'UPC-A' : 
-                         code.length === 8 ? 'EAN-8' : 
-                         'Autre format'}
+                        {codeType}
                       </div>
                     </button>
                   );
