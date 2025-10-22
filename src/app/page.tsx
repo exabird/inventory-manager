@@ -198,6 +198,14 @@ export default function Home() {
     lowStock: products.filter((p) => p.quantity > 0 && p.quantity < 5).length,
   };
 
+  // Debug: Log pour diagnostiquer le problème des statistiques
+  console.log('🔍 Debug statistiques:', {
+    productsTotal: products.length,
+    filteredProductsTotal: filteredProducts.length,
+    searchQuery: searchQuery,
+    totalItems: stats.totalItems
+  });
+
   return (
     <main className="min-h-screen bg-gray-50">
       {/* Header */}
