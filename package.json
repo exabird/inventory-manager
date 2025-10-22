@@ -1,6 +1,6 @@
 {
   "name": "inventory-app",
-  "version": "0.1.0",
+  "version": "0.0.20",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -14,7 +14,11 @@
     "type-check": "tsc --noEmit",
     "test:server": "curl -I http://localhost:3000",
     "logs": "tail -f dev.log",
-    "logs:error": "grep -i 'error\\|failed\\|exception' dev.log"
+    "logs:error": "grep -i 'error\\|failed\\|exception' dev.log",
+    "version:patch": "./scripts/version-update.sh patch",
+    "version:minor": "./scripts/version-update.sh minor",
+    "version:major": "./scripts/version-update.sh major",
+    "version:show": "echo \"Version actuelle: $(grep 'APP_VERSION' src/lib/version.ts | sed 's/.*\"\\(.*\\)\".*/\\1/')\""
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

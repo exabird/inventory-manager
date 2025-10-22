@@ -16,6 +16,7 @@ import { ProductService } from '@/lib/services';
 import ProductCard from '@/components/inventory/ProductCard';
 import ProductForm from '@/components/inventory/ProductForm';
 import BarcodeScanner from '@/components/scanner/BarcodeScanner';
+import { APP_VERSION } from '@/lib/version';
 
 export default function Home() {
   // États
@@ -225,6 +226,9 @@ export default function Home() {
               </h1>
               <p className="text-sm text-gray-600 mt-1">
                 Gestion intelligente de votre stock
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                Version {APP_VERSION}
               </p>
             </div>
           </div>
