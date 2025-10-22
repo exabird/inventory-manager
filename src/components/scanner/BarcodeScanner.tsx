@@ -21,6 +21,7 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
   const [showManualInput, setShowManualInput] = useState(false);
   const [detectedCodes, setDetectedCodes] = useState<string[]>([]);
   const [showCodeSelection, setShowCodeSelection] = useState(false);
+  const [showCameraSelection, setShowCameraSelection] = useState(false);
 
   useEffect(() => {
     // Démarrer automatiquement le scan avec la meilleure caméra
@@ -31,27 +32,40 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
         if (devices && devices.length) {
           setCameras(devices);
           
-          // Priorité pour la caméra ultra grand angle arrière
-          const ultraWideBackCamera = devices.find((device) =>
-            device.label.toLowerCase().includes('ultra') && 
-            device.label.toLowerCase().includes('back')
-          );
+          // Debug: Afficher toutes les caméras disponibles
+          console.log('Caméras disponibles:', devices.map(d => d.label));
           
-          // Sinon, caméra arrière normale
-          const backCamera = devices.find((device) =>
-            device.label.toLowerCase().includes('back')
-          );
+          // Priorité 1: Caméra ultra grand angle arrière (différentes variantes)
+          const ultraWideBackCamera = devices.find((device) => {
+            const label = device.label.toLowerCase();
+            return (label.includes('ultra') && label.includes('back')) ||
+                   (label.includes('ultra') && label.includes('rear')) ||
+                   (label.includes('ultra') && label.includes('environment')) ||
+                   (label.includes('ultra') && !label.includes('front'));
+          });
           
-          // Sinon, caméra arrière avec "rear" ou "environment"
-          const rearCamera = devices.find((device) =>
-            device.label.toLowerCase().includes('rear') || 
-            device.label.toLowerCase().includes('environment')
-          );
+          // Priorité 2: Caméra arrière normale (différentes variantes)
+          const backCamera = devices.find((device) => {
+            const label = device.label.toLowerCase();
+            return (label.includes('back') && !label.includes('front')) ||
+                   (label.includes('rear') && !label.includes('front')) ||
+                   (label.includes('environment') && !label.includes('front'));
+          });
+          
+          // Priorité 3: Caméra avec "environment" ou "rear"
+          const rearCamera = devices.find((device) => {
+            const label = device.label.toLowerCase();
+            return label.includes('environment') || label.includes('rear');
+          });
           
           const bestCamera = ultraWideBackCamera?.id || 
             backCamera?.id || 
             rearCamera?.id || 
             devices[0].id;
+          
+          // Debug: Afficher la caméra sélectionnée
+          const selectedCameraLabel = devices.find(d => d.id === bestCamera)?.label;
+          console.log('Caméra sélectionnée:', selectedCameraLabel);
           
           setSelectedCamera(bestCamera);
           
@@ -253,9 +267,20 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
           className={`w-full max-w-md ${isScanning ? '' : 'hidden'}`}
         ></div>
 
-        {/* Bouton de saisie manuelle dans la vue de scan */}
+        {/* Boutons de contrôle dans la vue de scan */}
         {isScanning && (
-          <div className="absolute top-20 right-4">
+          <div className="absolute top-20 right-4 flex gap-2">
+            <Button
+              onClick={() => {
+                stopScanning();
+                setShowCameraSelection(true);
+              }}
+              variant="outline"
+              size="sm"
+              className="bg-white/90 text-black hover:bg-white border-white/20"
+            >
+              📷 Caméra
+            </Button>
             <Button
               onClick={() => {
                 stopScanning();
@@ -290,6 +315,61 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
                 className="bg-white/10 text-white border-white/20 hover:bg-white/20"
               >
                 {showManualInput ? 'Masquer' : 'Entrer le code manuellement'}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Sélection de caméra */}
+        {showCameraSelection && (
+          <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-6">
+            <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+              <h3 className="text-lg font-semibold mb-4 text-gray-900">
+                Choisir la caméra
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Sélectionnez la caméra ultra grand angle arrière :
+              </p>
+              <div className="space-y-2">
+                {cameras.map((camera) => {
+                  const isSelected = selectedCamera === camera.id;
+                  const isUltraWide = camera.label.toLowerCase().includes('ultra');
+                  const isBack = camera.label.toLowerCase().includes('back') || 
+                               camera.label.toLowerCase().includes('rear') ||
+                               camera.label.toLowerCase().includes('environment');
+                  
+                  return (
+                    <button
+                      key={camera.id}
+                      onClick={() => {
+                        setSelectedCamera(camera.id);
+                        setShowCameraSelection(false);
+                        startScanningWithCamera(camera.id);
+                      }}
+                      className={`w-full p-3 rounded-lg border text-left transition-colors ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50 text-blue-900'
+                          : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">{camera.label}</span>
+                        {isUltraWide && isBack && (
+                          <span className="text-xs bg-green-500 text-white px-2 py-1 rounded">
+                            ⭐ Recommandé
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <Button
+                onClick={() => setShowCameraSelection(false)}
+                variant="outline"
+                className="w-full mt-4"
+              >
+                Annuler
               </Button>
             </div>
           </div>
