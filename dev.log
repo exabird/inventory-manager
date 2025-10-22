@@ -1,0 +1,19 @@
+
+> inventory-app@0.1.0 dev
+> next dev
+
+   ▲ Next.js 16.0.0 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.154:3000
+   - Environments: .env.local
+   - Experiments (use with caution):
+     · serverActions
+
+ ✓ Starting...
+ ✓ Ready in 294ms
+ GET / 200 in 1238ms (compile: 1108ms, render: 130ms)
+ GET / 200 in 869ms (compile: 721ms, render: 148ms)
+ GET / 200 in 22ms (compile: 2ms, render: 20ms)
+ GET / 200 in 38ms (compile: 5ms, render: 33ms)
+ GET / 200 in 33ms (compile: 5ms, render: 27ms)
+ GET / 200 in 17ms (compile: 1436µs, render: 15ms)

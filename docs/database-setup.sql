@@ -211,3 +211,4 @@ SELECT * FROM categories;
 -- Afficher les statistiques
 SELECT * FROM inventory_stats;
 
+

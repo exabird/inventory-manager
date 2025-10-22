@@ -354,3 +354,4 @@ Votre application d'inventaire est maintenant en production !
 4. Activez Vercel Analytics
 5. Partagez avec vos utilisateurs ! 🚀
 
+

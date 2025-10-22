@@ -6,11 +6,11 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 // Client public (côté client et serveur)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Client admin (côté serveur uniquement)
-export const supabaseAdmin = createClient(
-  supabaseUrl,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-);
+// Client admin (côté serveur uniquement) - seulement si la clé est disponible
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+export const supabaseAdmin = serviceRoleKey && !serviceRoleKey.includes('placeholder') 
+  ? createClient(supabaseUrl, serviceRoleKey)
+  : null;
 
 // Types pour la base de données
 export interface Product {
@@ -44,4 +44,5 @@ export interface ProductHistory {
   notes: string | null;
   created_at: string;
 }
+
 

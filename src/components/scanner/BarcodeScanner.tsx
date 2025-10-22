@@ -17,6 +17,8 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
   const [error, setError] = useState<string | null>(null);
   const [cameras, setCameras] = useState<any[]>([]);
   const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
+  const [manualInput, setManualInput] = useState('');
+  const [showManualInput, setShowManualInput] = useState(false);
 
   useEffect(() => {
     // Récupérer la liste des caméras disponibles
@@ -35,7 +37,15 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       })
       .catch((err) => {
         console.error('Error getting cameras:', err);
-        setError('Impossible d\'accéder à la caméra.');
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isChrome = /CriOS/.test(navigator.userAgent);
+        
+        if (isIOS && isChrome) {
+          setError('⚠️ Chrome sur iOS ne supporte pas la caméra. Utilisez Safari ou entrez le code manuellement.');
+        } else {
+          setError('Impossible d\'accéder à la caméra. Vous pouvez entrer le code manuellement.');
+        }
+        setShowManualInput(true);
       });
 
     return () => {
@@ -81,6 +91,14 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       console.error('Error starting scanner:', err);
       setError(`Erreur lors du démarrage du scanner: ${err.message || 'Erreur inconnue'}`);
       setIsScanning(false);
+      setShowManualInput(true);
+    }
+  };
+
+  const handleManualSubmit = () => {
+    if (manualInput.trim()) {
+      onScanSuccess(manualInput.trim());
+      onClose();
     }
   };
 
@@ -169,6 +187,46 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
               <Camera className="h-5 w-5 mr-2" />
               Démarrer le scan
             </Button>
+
+            {/* Option de saisie manuelle */}
+            <div className="mt-4">
+              <Button
+                onClick={() => setShowManualInput(!showManualInput)}
+                variant="outline"
+                className="bg-white/10 text-white border-white/20 hover:bg-white/20"
+              >
+                {showManualInput ? 'Masquer' : 'Entrer le code manuellement'}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Saisie manuelle */}
+        {showManualInput && !isScanning && (
+          <div className="absolute bottom-20 left-0 right-0 px-6">
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+              <label className="block text-white text-sm font-semibold mb-2">
+                Code-barres ou QR code
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={manualInput}
+                  onChange={(e) => setManualInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleManualSubmit()}
+                  placeholder="Ex: 3245678901234"
+                  className="flex-1 px-4 py-2 rounded-lg bg-white/20 text-white placeholder:text-white/50 border border-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
+                  autoFocus
+                />
+                <Button
+                  onClick={handleManualSubmit}
+                  className="bg-white text-black hover:bg-white/90"
+                  disabled={!manualInput.trim()}
+                >
+                  OK
+                </Button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -205,4 +263,5 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
     </div>
   );
 }
+
 

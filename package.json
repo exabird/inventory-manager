@@ -4,9 +4,17 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:monitor": "./scripts/monitor-logs.sh",
+    "dev:clean": "pkill -f 'next dev' && npm run dev",
     "build": "next build",
+    "build:check": "npm run build && echo '✅ Build successful'",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "type-check": "tsc --noEmit",
+    "test:server": "curl -I http://localhost:3000",
+    "logs": "tail -f dev.log",
+    "logs:error": "grep -i 'error\\|failed\\|exception' dev.log"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

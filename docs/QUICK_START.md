@@ -221,3 +221,4 @@ Dans la prochaine version, vous pourrez :
 
 **Bon inventaire ! 📦✨**
 
+

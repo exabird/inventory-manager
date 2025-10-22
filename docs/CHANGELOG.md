@@ -172,3 +172,4 @@ inventory-app/
 
 *Format du changelog basé sur [Keep a Changelog](https://keepachangelog.com/)*
 
+

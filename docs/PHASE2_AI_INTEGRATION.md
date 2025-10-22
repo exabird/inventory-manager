@@ -500,3 +500,4 @@ Après la Phase 2, envisager :
 
 **Avec la Phase 2, votre application deviendra vraiment intelligente ! 🤖✨**
 
+
