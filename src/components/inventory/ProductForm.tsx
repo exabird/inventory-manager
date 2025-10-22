@@ -47,6 +47,7 @@ export default function ProductForm({
     image_url: product?.image_url || '',
     notes: product?.notes || '',
   });
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   // Charger les catégories
   useEffect(() => {
@@ -70,10 +71,45 @@ export default function ProductForm({
       ...prev,
       [field]: value
     }));
+    
+    // Effacer l'erreur de validation pour ce champ
+    if (validationErrors[field]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    if (!formData.barcode || formData.barcode.trim() === '') {
+      errors.barcode = 'Le code-barres est requis';
+    }
+    
+    if (!formData.name || formData.name.trim() === '') {
+      errors.name = 'Le nom du produit est requis';
+    }
+    
+    if (formData.quantity < 0) {
+      errors.quantity = 'La quantité ne peut pas être négative';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation côté client
+    if (!validateForm()) {
+      console.log('❌ Validation échouée:', validationErrors);
+      return;
+    }
+    
     try {
       await onSubmit(formData);
     } catch (error) {
@@ -92,7 +128,11 @@ export default function ProductForm({
           onChange={(e) => handleInputChange('barcode', e.target.value)}
           placeholder="1234567890123"
           disabled={!!product}
+          className={validationErrors.barcode ? 'border-red-500' : ''}
         />
+        {validationErrors.barcode && (
+          <p className="text-sm text-red-600">{validationErrors.barcode}</p>
+        )}
       </div>
 
       {/* Nom */}
@@ -103,7 +143,11 @@ export default function ProductForm({
           value={formData.name}
           onChange={(e) => handleInputChange('name', e.target.value)}
           placeholder="Ex: iPhone 15 Pro"
+          className={validationErrors.name ? 'border-red-500' : ''}
         />
+        {validationErrors.name && (
+          <p className="text-sm text-red-600">{validationErrors.name}</p>
+        )}
       </div>
 
       {/* Fabricant */}
@@ -138,7 +182,11 @@ export default function ProductForm({
           onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 0)}
           placeholder="0"
           min="0"
+          className={validationErrors.quantity ? 'border-red-500' : ''}
         />
+        {validationErrors.quantity && (
+          <p className="text-sm text-red-600">{validationErrors.quantity}</p>
+        )}
       </div>
 
       {/* Catégorie */}
