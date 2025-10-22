@@ -47,7 +47,14 @@
 - **Historique complet** : Toutes les opérations enregistrées
 - **Stock minimum** : Alertes configurables
 
-### 5. **Base de Données** 🗄️
+### 5. **Scraping IA** 🤖
+- **Recherche automatique** : IA cherche sur les sites fabricants
+- **Remplissage intelligent** : Champs pré-remplis automatiquement
+- **Indicateurs visuels** : Icônes colorées sur champs IA
+- **Validation cohérence** : Vérification logique des données
+- **Configuration flexible** : Préprompt personnalisable
+
+### 6. **Base de Données** 🗄️
 - **Produits** : Informations principales et métadonnées
 - **Catégories** : Classification des produits
 - **Pièces** : Suivi individuel avec numéros de série

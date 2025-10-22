@@ -134,3 +134,6 @@ echo "1. Mettre à jour le CHANGELOG.md avec les détails des changements"
 echo "2. Tester l'application localement: npm run dev"
 echo "3. Vérifier le déploiement Vercel"
 echo "4. Créer un tag Git: git tag v$NEW_VERSION && git push origin v$NEW_VERSION"
+
+
+

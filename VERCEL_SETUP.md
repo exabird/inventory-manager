@@ -60,3 +60,6 @@ Vercel est maintenant connecté à votre repository GitHub :
 - **Repository GitHub** : https://github.com/exabird/inventory-manager
 - **Dashboard Supabase** : https://supabase.com/dashboard/project/nuonbtjrtacfjifnrziv
 
+
+
+

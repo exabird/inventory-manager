@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.1.14] - 2025-01-22
+
+### 🤖 Nouvelle Feature Majeure : Scraping IA et Navigation
+**Intégration de l'analyse IA avec Claude 3.5 Sonnet pour le scraping automatique de données produit**
+
+#### Navigation améliorée :
+- ✅ **Sidebar desktop** : Barre latérale toujours visible avec menu de navigation
+- ✅ **Bottom bar mobile** : Navigation style app native en bas de l'écran
+- ✅ **Pages nouvelles** : Dashboard et Paramètres
+
+#### Scraping IA avec Claude :
+- ✅ **Service de scraping** : Recherche automatique sur sites fabricants
+- ✅ **API Claude 3.5 Sonnet** : Analyse intelligente des données produit
+- ✅ **Préprompt personnalisable** : Configuration flexible du comportement IA
+- ✅ **Validation cohérence** : Vérification logique des données extraites
+- ✅ **Multi-sources** : OpenFoodFacts, UPC Database, sites fabricants
+
+#### Indicateurs visuels IA :
+- ✅ **Icônes colorées** : Badge sur champs remplis par l'IA
+- ✅ **Score de confiance** : Vert (85%+), Jaune (70-85%), Orange (<70%)
+- ✅ **Tooltip informatif** : Indique source et confiance au survol
+
+#### Page Paramètres :
+- ✅ **Configuration API** : Saisie clé API Claude
+- ✅ **Sélection modèle** : Sonnet, Haiku, Opus
+- ✅ **Confiance minimale** : Seuil configurable
+- ✅ **Préprompt custom** : Édition et réinitialisation du prompt système
+
+---
+
 ## [0.1.13] - 2025-01-22
 
 ### 🎨 Refonte complète du wizard de stock - Design system Shadcn

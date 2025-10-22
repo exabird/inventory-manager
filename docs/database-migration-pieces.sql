@@ -84,3 +84,6 @@ COMMENT ON COLUMN public.pieces.serial_number IS 'Numéro de série unique de la
 COMMENT ON COLUMN public.pieces.condition IS 'État de la pièce: new, used, refurbished, damaged';
 COMMENT ON COLUMN public.pieces.warranty_expires IS 'Date d''expiration de la garantie calculée automatiquement';
 
+
+
+

@@ -139,3 +139,6 @@ trap 'echo -e "\n${YELLOW}🛑 Arrêt de la surveillance...${NC}"; exit 0' INT T
 
 # Lancer le script principal
 main
+
+
+

@@ -90,3 +90,6 @@ npm run type-check
 ---
 
 **Prochaine étape : Donnez-moi la service_role key pour corriger l'erreur actuelle !** 🔑
+
+
+
