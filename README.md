@@ -1,10 +1,31 @@
-# 📦 Inventory Manager
+# 📱 Inventory Manager
 
 Application web mobile-first pour la gestion intelligente de votre stock de marchandises avec scan de codes-barres et QR codes.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![Next.js](https://img.shields.io/badge/Next.js-15.5.4-black)
+![Version](https://img.shields.io/badge/version-0.0.22-blue)
+![Next.js](https://img.shields.io/badge/Next.js-16.0.0-black)
 ![License](https://img.shields.io/badge/license-MIT-green)
+
+## 🚀 Déploiement
+
+- **Production** : https://stock.exabird.be/
+- **Version actuelle** : 0.0.22
+
+## 📚 Documentation
+
+### Pour les développeurs
+- **[Processus de développement](docs/DEVELOPMENT_PROCESSES.md)** - Règles et processus obligatoires
+- **[Documentation complète](docs/APPLICATION_DOCUMENTATION.md)** - Architecture, configuration, utilisation
+
+### Pour les utilisateurs
+- **[Guide d'utilisation](docs/APPLICATION_DOCUMENTATION.md#utilisation)** - Comment utiliser l'application
+- **[Changelog](CHANGELOG.md)** - Historique des versions et modifications
+
+## ⚠️ IMPORTANT POUR LES DÉVELOPPEURS
+
+**TOUTE MODIFICATION DE L'APPLICATION DOIT ÊTRE ACCOMPAGNÉE D'UNE MISE À JOUR DE VERSION**
+
+Consultez [docs/DEVELOPMENT_PROCESSES.md](docs/DEVELOPMENT_PROCESSES.md) pour les processus obligatoires.
 
 ## ✨ Fonctionnalités
 
