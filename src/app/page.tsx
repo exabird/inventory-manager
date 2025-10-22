@@ -52,27 +52,48 @@ export default function Home() {
   }, [searchQuery, products]);
 
   const loadProducts = async () => {
-    setIsLoading(true);
-    const data = await ProductService.getAll();
-    setProducts(data);
-    setFilteredProducts(data);
-    setIsLoading(false);
+    try {
+      setIsLoading(true);
+      console.log('Chargement des produits...');
+      const data = await ProductService.getAll();
+      console.log('Produits chargés:', data.length);
+      setProducts(data);
+      setFilteredProducts(data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des produits:', error);
+      setProducts([]);
+      setFilteredProducts([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleScanSuccess = async (barcode: string) => {
-    setShowScanner(false);
-    
-    // Vérifier si le produit existe déjà
-    const existingProduct = await ProductService.getByBarcode(barcode);
-    
-    if (existingProduct) {
-      // Produit existe → proposer d'éditer
-      alert(`Produit trouvé: ${existingProduct.name}`);
-      setEditingProduct(existingProduct);
-      setShowProductForm(true);
-    } else {
-      // Nouveau produit → formulaire avec code-barres pré-rempli
+    try {
+      console.log('Code scanné:', barcode);
+      setShowScanner(false);
+      
+      // Vérifier si le produit existe déjà
+      const existingProduct = await ProductService.getByBarcode(barcode);
+      
+      if (existingProduct) {
+        // Produit existe → proposer d'éditer
+        console.log('Produit existant trouvé:', existingProduct.name);
+        setEditingProduct(existingProduct);
+        setScannedBarcode(null); // Clear scanned barcode for existing product
+        setShowProductForm(true);
+      } else {
+        // Nouveau produit → formulaire avec code-barres pré-rempli
+        console.log('Nouveau produit à créer');
+        setScannedBarcode(barcode);
+        setEditingProduct(null); // Clear editing product for new product
+        setShowProductForm(true);
+      }
+    } catch (error) {
+      console.error('Erreur lors du traitement du scan:', error);
+      // En cas d'erreur, créer un nouveau produit avec le code scanné
       setScannedBarcode(barcode);
+      setEditingProduct(null);
       setShowProductForm(true);
     }
   };
@@ -80,11 +101,15 @@ export default function Home() {
   const handleAddProduct = async (data: any) => {
     setIsSubmitting(true);
     try {
+      console.log('Enregistrement du produit:', data);
+      
       if (editingProduct) {
         // Mise à jour
+        console.log('Mise à jour du produit existant:', editingProduct.id);
         await ProductService.update(editingProduct.id, data);
       } else {
         // Création
+        console.log('Création d\'un nouveau produit');
         await ProductService.create({
           ...data,
           metadata: {},
@@ -98,9 +123,12 @@ export default function Home() {
       setShowProductForm(false);
       setScannedBarcode(null);
       setEditingProduct(null);
+      
+      console.log('Produit enregistré avec succès');
     } catch (error) {
-      console.error('Error saving product:', error);
-      alert('Erreur lors de l\'enregistrement du produit.');
+      console.error('Erreur lors de l\'enregistrement:', error);
+      // Ne pas utiliser alert() sur mobile, juste logger l'erreur
+      // L'utilisateur verra l'erreur dans la console
     } finally {
       setIsSubmitting(false);
     }
