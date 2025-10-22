@@ -1,5 +1,5 @@
 // Configuration de version de l'application
-export const APP_VERSION = '0.0.21';
+export const APP_VERSION = '0.0.22';
 export const APP_NAME = 'Inventory Manager';
 
 // Informations de version

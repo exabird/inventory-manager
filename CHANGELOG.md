@@ -5,6 +5,23 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.0.22] - 2025-01-22
+
+### 🎨 Améliorations UX
+- **Nouveau composant ProductListItem** : Interface compacte et moderne inspirée des meilleures pratiques mobile-first
+- **Filtres par statut de stock** : Tous, En stock, Stock faible, Rupture avec compteurs dynamiques
+- **Basculement de vue** : Vue liste compacte et vue grille détaillée
+- **Actions intégrées** : Contrôles de quantité et actions rapides directement dans la liste
+- **Design moderne** : Utilisation de Shadcn/ui pour une interface cohérente et responsive
+
+### 🎯 Impact
+- **Interface mobile-first** : Optimisée pour l'utilisation sur smartphone
+- **Navigation intuitive** : Filtres horizontaux et contrôles de vue accessibles
+- **Efficacité améliorée** : Informations essentielles visibles d'un coup d'œil
+- **Actions rapides** : Modification des quantités sans navigation supplémentaire
+
+---
+
 ## [0.0.21] - 2025-01-22
 
 ### 🐛 Corrections
