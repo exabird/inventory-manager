@@ -19,6 +19,8 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
   const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
   const [manualInput, setManualInput] = useState('');
   const [showManualInput, setShowManualInput] = useState(false);
+  const [detectedCodes, setDetectedCodes] = useState<string[]>([]);
+  const [showCodeSelection, setShowCodeSelection] = useState(false);
 
   useEffect(() => {
     // Récupérer la liste des caméras disponibles
@@ -26,11 +28,30 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       .then((devices) => {
         if (devices && devices.length) {
           setCameras(devices);
-          // Préférer la caméra arrière sur mobile
+          
+          // Priorité pour la caméra ultra grand angle arrière
+          const ultraWideBackCamera = devices.find((device) =>
+            device.label.toLowerCase().includes('ultra') && 
+            device.label.toLowerCase().includes('back')
+          );
+          
+          // Sinon, caméra arrière normale
           const backCamera = devices.find((device) =>
             device.label.toLowerCase().includes('back')
           );
-          setSelectedCamera(backCamera?.id || devices[0].id);
+          
+          // Sinon, caméra arrière avec "rear" ou "environment"
+          const rearCamera = devices.find((device) =>
+            device.label.toLowerCase().includes('rear') || 
+            device.label.toLowerCase().includes('environment')
+          );
+          
+          setSelectedCamera(
+            ultraWideBackCamera?.id || 
+            backCamera?.id || 
+            rearCamera?.id || 
+            devices[0].id
+          );
         } else {
           setError('Aucune caméra détectée sur votre appareil.');
         }
@@ -73,14 +94,39 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
         selectedCamera,
         {
           fps: 10, // Frames par seconde
-          qrbox: { width: 250, height: 250 }, // Zone de scan
+          qrbox: { width: 300, height: 300 }, // Zone de scan plus large
           aspectRatio: 1.0,
         },
         (decodedText) => {
-          // Succès du scan
-          console.log('Code scanné:', decodedText);
-          stopScanning();
-          onScanSuccess(decodedText);
+          // Succès du scan - détecter plusieurs codes
+          console.log('Code détecté:', decodedText);
+          
+          // Ajouter le code à la liste des codes détectés
+          setDetectedCodes(prev => {
+            if (!prev.includes(decodedText)) {
+              const newCodes = [...prev, decodedText];
+              
+              // Si on a plusieurs codes, arrêter le scan et proposer la sélection
+              if (newCodes.length >= 2) {
+                stopScanning();
+                setShowCodeSelection(true);
+                return newCodes;
+              }
+              
+              // Si c'est le premier code, continuer à scanner brièvement pour détecter d'autres codes
+              setTimeout(() => {
+                if (newCodes.length === 1) {
+                  // Auto-sélection du meilleur code après 1 seconde
+                  const bestCode = selectBestBarcode(newCodes);
+                  stopScanning();
+                  onScanSuccess(bestCode);
+                }
+              }, 1000);
+              
+              return newCodes;
+            }
+            return prev;
+          });
         },
         (errorMessage) => {
           // Erreur de scan (normal si rien n'est détecté)
@@ -100,6 +146,43 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       onScanSuccess(manualInput.trim());
       onClose();
     }
+  };
+
+  // Fonction pour choisir le meilleur code-barres
+  const selectBestBarcode = (codes: string[]): string => {
+    // Priorité : codes-barres EAN-13 (13 chiffres)
+    const ean13Codes = codes.filter(code => /^\d{13}$/.test(code));
+    if (ean13Codes.length > 0) {
+      return ean13Codes[0];
+    }
+
+    // Priorité : codes-barres UPC-A (12 chiffres)
+    const upcCodes = codes.filter(code => /^\d{12}$/.test(code));
+    if (upcCodes.length > 0) {
+      return upcCodes[0];
+    }
+
+    // Priorité : codes-barres EAN-8 (8 chiffres)
+    const ean8Codes = codes.filter(code => /^\d{8}$/.test(code));
+    if (ean8Codes.length > 0) {
+      return ean8Codes[0];
+    }
+
+    // Sinon, prendre le premier code numérique
+    const numericCodes = codes.filter(code => /^\d+$/.test(code));
+    if (numericCodes.length > 0) {
+      return numericCodes[0];
+    }
+
+    // En dernier recours, prendre le premier code
+    return codes[0];
+  };
+
+  const handleCodeSelection = (selectedCode: string) => {
+    setShowCodeSelection(false);
+    setDetectedCodes([]);
+    onScanSuccess(selectedCode);
+    onClose();
   };
 
   const stopScanning = async () => {
@@ -201,8 +284,60 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
           </div>
         )}
 
+        {/* Sélection de codes multiples */}
+        {showCodeSelection && detectedCodes.length > 1 && (
+          <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-6">
+            <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+              <h3 className="text-lg font-semibold mb-4 text-gray-900">
+                Plusieurs codes détectés
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Choisissez le code-barres principal du produit :
+              </p>
+              <div className="space-y-2">
+                {detectedCodes.map((code, index) => {
+                  const isRecommended = selectBestBarcode(detectedCodes) === code;
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => handleCodeSelection(code)}
+                      className={`w-full p-3 rounded-lg border text-left transition-colors ${
+                        isRecommended
+                          ? 'border-green-500 bg-green-50 text-green-900'
+                          : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-sm">{code}</span>
+                        {isRecommended && (
+                          <span className="text-xs bg-green-500 text-white px-2 py-1 rounded">
+                            Recommandé
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {code.length === 13 ? 'EAN-13' : 
+                         code.length === 12 ? 'UPC-A' : 
+                         code.length === 8 ? 'EAN-8' : 
+                         'Autre format'}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <Button
+                onClick={() => setShowCodeSelection(false)}
+                variant="outline"
+                className="w-full mt-4"
+              >
+                Annuler
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Saisie manuelle */}
-        {showManualInput && !isScanning && (
+        {showManualInput && !isScanning && !showCodeSelection && (
           <div className="absolute bottom-20 left-0 right-0 px-6">
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
               <label className="block text-white text-sm font-semibold mb-2">
