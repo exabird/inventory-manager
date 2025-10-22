@@ -4,16 +4,19 @@ import { supabase, Product, Category } from './supabase';
 export const ProductService = {
   // Récupérer tous les produits
   async getAll(): Promise<Product[]> {
+    console.log('📦 ProductService.getAll() - Début requête...');
     const { data, error } = await supabase
       .from('products')
       .select('*, categories(name)')
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching products:', error);
+      console.error('❌ Error fetching products:', error);
       return [];
     }
 
+    console.log('✅ ProductService.getAll() - Références récupérées:', data?.length || 0);
+    console.log('Données:', data);
     return data || [];
   },
 
@@ -35,6 +38,7 @@ export const ProductService = {
 
   // Créer un nouveau produit
   async create(product: Omit<Product, 'id' | 'created_at' | 'updated_at'>): Promise<Product | null> {
+    console.log('➕ ProductService.create() - Création référence:', product);
     const { data, error } = await supabase
       .from('products')
       .insert([product])
@@ -42,9 +46,11 @@ export const ProductService = {
       .single();
 
     if (error) {
-      console.error('Error creating product:', error);
+      console.error('❌ Error creating product:', error);
       return null;
     }
+
+    console.log('✅ ProductService.create() - Référence créée:', data);
 
     // Ajouter à l'historique
     await this.addHistory(data.id, 'added', null, `Produit ajouté: ${product.name}`);
