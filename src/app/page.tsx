@@ -16,6 +16,7 @@ import { ProductService } from '@/lib/services';
 import ProductCard from '@/components/inventory/ProductCard';
 import ProductForm from '@/components/inventory/ProductForm';
 import BarcodeScanner from '@/components/scanner/BarcodeScanner';
+import EnrichmentIndicator from '@/components/enrichment/EnrichmentIndicator';
 
 export default function Home() {
   // États
@@ -28,6 +29,8 @@ export default function Home() {
   const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEnriching, setIsEnriching] = useState(false);
+  const [enrichedProductData, setEnrichedProductData] = useState<any>(null);
 
   // Charger les produits au montage
   useEffect(() => {
@@ -80,21 +83,24 @@ export default function Home() {
         // Produit existe → proposer d'éditer
         console.log('Produit existant trouvé:', existingProduct.name);
         setEditingProduct(existingProduct);
-        setScannedBarcode(null); // Clear scanned barcode for existing product
+        setScannedBarcode(null);
+        setEnrichedProductData(null);
         setShowProductForm(true);
       } else {
-        // Nouveau produit → formulaire avec code-barres pré-rempli
-        console.log('Nouveau produit à créer');
+        // Nouveau produit → enrichissement automatique
+        console.log('Nouveau produit à créer - démarrage de l\'enrichissement');
         setScannedBarcode(barcode);
-        setEditingProduct(null); // Clear editing product for new product
-        setShowProductForm(true);
+        setEditingProduct(null);
+        setEnrichedProductData(null);
+        setIsEnriching(true);
       }
     } catch (error) {
       console.error('Erreur lors du traitement du scan:', error);
       // En cas d'erreur, créer un nouveau produit avec le code scanné
       setScannedBarcode(barcode);
       setEditingProduct(null);
-      setShowProductForm(true);
+      setEnrichedProductData(null);
+      setIsEnriching(true);
     }
   };
 
@@ -166,6 +172,22 @@ export default function Home() {
     setShowProductForm(false);
     setScannedBarcode(null);
     setEditingProduct(null);
+    setEnrichedProductData(null);
+  };
+
+  const handleEnrichmentComplete = (success: boolean, data?: any) => {
+    setIsEnriching(false);
+    
+    if (success && data) {
+      console.log('✅ Enrichissement réussi, données:', data);
+      setEnrichedProductData(data);
+    } else {
+      console.log('❌ Enrichissement échoué');
+      setEnrichedProductData(null);
+    }
+    
+    // Ouvrir le formulaire dans tous les cas
+    setShowProductForm(true);
   };
 
   // Statistiques

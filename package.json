@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3000",
     "dev:monitor": "./scripts/monitor-logs.sh",
     "dev:clean": "pkill -f 'next dev' && npm run dev",
     "build": "next build",
@@ -17,6 +17,7 @@
     "logs:error": "grep -i 'error\\|failed\\|exception' dev.log"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.67.0",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -24,6 +25,7 @@
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.3",
     "@supabase/supabase-js": "^2.76.1",
+    "axios": "^1.12.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "html5-qrcode": "^2.3.8",
