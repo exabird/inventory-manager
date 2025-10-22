@@ -5,6 +5,20 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.0.21] - 2025-01-22
+
+### 🐛 Corrections
+- **Correction contrainte NOT NULL** : Suppression de la contrainte NOT NULL sur la colonne `barcode` en base de données
+- **Migration make_barcode_nullable** : Les produits peuvent maintenant être créés sans code-barres
+- **Résolution erreur création** : Plus d'erreur `null value in column "barcode" violates not-null constraint`
+
+### 🎯 Impact
+- **Création de produits simplifiée** : Seuls nom + référence interne requis
+- **Formulaire fonctionnel** : Plus de blocage lors de la création
+- **Base de données flexible** : Support des produits sans code-barres
+
+---
+
 ## [0.0.20] - 2025-01-22
 
 ### 🐛 Corrections
