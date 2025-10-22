@@ -10,14 +10,14 @@ import { CategoryService } from '@/lib/services';
 
 // Interface simplifiée pour les données du formulaire
 interface ProductFormData {
-  barcode: string;
+  barcode: string | null;
   name: string;
-  manufacturer?: string;
-  internal_ref?: string;
+  manufacturer?: string | null;
+  internal_ref?: string | null;
   quantity: number;
-  category_id?: string;
-  image_url?: string;
-  notes?: string;
+  category_id?: string | null;
+  image_url?: string | null;
+  notes?: string | null;
 }
 
 interface ProductFormProps {
@@ -134,7 +134,7 @@ export default function ProductForm({
         <Label htmlFor="barcode">Code-barres / QR Code</Label>
         <Input
           id="barcode"
-          value={formData.barcode}
+          value={formData.barcode || ''}
           onChange={(e) => handleInputChange('barcode', e.target.value)}
           placeholder="1234567890123"
           disabled={!!product}
