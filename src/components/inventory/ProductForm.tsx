@@ -18,6 +18,7 @@ interface ProductFormData {
   category_id?: string | null;
   image_url?: string | null;
   notes?: string | null;
+  metadata?: Record<string, unknown>;
 }
 
 interface ProductFormProps {
@@ -225,7 +226,7 @@ export default function ProductForm({
 
       {/* URL de l'image */}
       <div className="space-y-2">
-        <Label htmlFor="image_url">URL de l'image</Label>
+        <Label htmlFor="image_url">URL de l&apos;image</Label>
         <Input
           id="image_url"
           value={formData.image_url || ''}

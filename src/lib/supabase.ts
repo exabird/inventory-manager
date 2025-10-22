@@ -7,6 +7,17 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOi
 // Client public (côté client et serveur)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Configuration pour le stockage d'images
+export const STORAGE_BUCKETS = {
+  PRODUCT_IMAGES: 'product-images',
+} as const;
+
+// Fonction pour obtenir l'URL publique d'une image
+export const getImageUrl = (path: string) => {
+  const { data } = supabase.storage.from(STORAGE_BUCKETS.PRODUCT_IMAGES).getPublicUrl(path);
+  return data.publicUrl;
+};
+
 // Client admin (côté serveur uniquement) - seulement si la clé est disponible et valide
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 export const supabaseAdmin = serviceRoleKey && 
@@ -18,7 +29,7 @@ export const supabaseAdmin = serviceRoleKey &&
 // Types pour la base de données
 export interface Product {
   id: string;
-  barcode: string;
+  barcode: string | null;
   name: string;
   manufacturer: string | null;
   internal_ref: string | null;
@@ -26,9 +37,16 @@ export interface Product {
   notes: string | null;
   category_id: string | null;
   image_url: string | null;
-  metadata: Record<string, any> | null;
+  metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
+  // Nouveaux champs ajoutés
+  manufacturer_ref: string | null;
+  brand: string | null;
+  short_description: string | null;
+  selling_price_htva: number | null;
+  purchase_price_htva: number | null;
+  warranty_period: string | null;
 }
 
 export interface Category {

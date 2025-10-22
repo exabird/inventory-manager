@@ -22,6 +22,150 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
   const [detectedCodes, setDetectedCodes] = useState<string[]>([]);
   const [showCodeSelection, setShowCodeSelection] = useState(false);
   const [showCameraSelection, setShowCameraSelection] = useState(false);
+  
+  // Générer un ID unique pour éviter les conflits
+  const scannerId = `scanner-${Math.random().toString(36).substr(2, 9)}`;
+
+  // Nettoyer le scanner au démontage du composant
+  useEffect(() => {
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(console.error);
+        scannerRef.current.clear();
+      }
+    };
+  }, []);
+
+  // Fonction pour choisir le meilleur code-barres
+  const selectBestBarcode = (codes: string[]): string => {
+    console.log('📊 Codes détectés:', codes);
+    
+    // Priorité 1 : Codes UPC-A (12 chiffres) - Standard mondial (USA, Canada, etc.)
+    const upcCodes = codes.filter(code => /^\d{12}$/.test(code));
+    if (upcCodes.length > 0) {
+      console.log('✅ Code UPC-A sélectionné:', upcCodes[0]);
+      return upcCodes[0];
+    }
+
+    // Priorité 2 : Codes EAN-13 (13 chiffres) commençant par 0 (souvent des UPC)
+    const ean13WithZero = codes.filter(code => /^0\d{12}$/.test(code));
+    if (ean13WithZero.length > 0) {
+      console.log('✅ Code EAN-13 (UPC format) sélectionné:', ean13WithZero[0]);
+      return ean13WithZero[0];
+    }
+
+    // Priorité 3 : Autres codes EAN-13 (13 chiffres)
+    const ean13Codes = codes.filter(code => /^\d{13}$/.test(code));
+    if (ean13Codes.length > 0) {
+      console.log('✅ Code EAN-13 sélectionné:', ean13Codes[0]);
+      return ean13Codes[0];
+    }
+
+    // Priorité 4 : Codes EAN-8 (8 chiffres)
+    const ean8Codes = codes.filter(code => /^\d{8}$/.test(code));
+    if (ean8Codes.length > 0) {
+      console.log('✅ Code EAN-8 sélectionné:', ean8Codes[0]);
+      return ean8Codes[0];
+    }
+
+    // Priorité 5 : EXCLURE les numéros de série (trop longs ou avec lettres)
+    // Les numéros de série ont souvent plus de 13 chiffres ou contiennent des lettres
+    const standardCodes = codes.filter(code => 
+      /^\d{8,13}$/.test(code) // Seulement les codes entre 8 et 13 chiffres
+    );
+    if (standardCodes.length > 0) {
+      console.log('✅ Code standard sélectionné:', standardCodes[0]);
+      return standardCodes[0];
+    }
+
+    // En dernier recours, prendre le premier code
+    console.log('⚠️ Aucun code standard, utilisation du premier:', codes[0]);
+    return codes[0];
+  };
+
+  const stopScanning = async () => {
+    if (scannerRef.current?.isScanning) {
+      try {
+        await scannerRef.current.stop();
+        scannerRef.current.clear();
+        setIsScanning(false);
+      } catch (err) {
+        console.error('Error stopping scanner:', err);
+      }
+    }
+  };
+
+  const startScanningWithCamera = async (cameraId: string) => {
+    try {
+      setError(null);
+      setIsScanning(true);
+      setDetectedCodes([]);
+
+      const html5QrCode = new Html5Qrcode(scannerId);
+      scannerRef.current = html5QrCode;
+
+      await html5QrCode.start(
+        cameraId,
+        {
+          fps: 10,
+          qrbox: { width: 300, height: 300 },
+          aspectRatio: 1.0,
+        },
+        (decodedText) => {
+          try {
+            console.log('Code détecté:', decodedText);
+            
+            // Ajouter le code à la liste des codes détectés
+            setDetectedCodes(prev => {
+              if (!prev.includes(decodedText)) {
+                const newCodes = [...prev, decodedText];
+                
+                // Si on a plusieurs codes, arrêter le scan et proposer la sélection
+                if (newCodes.length >= 2) {
+                  stopScanning();
+                  setShowCodeSelection(true);
+                  return newCodes;
+                }
+                
+                // Si c'est le premier code, continuer à scanner brièvement pour détecter d'autres codes
+                setTimeout(() => {
+                  if (newCodes.length === 1) {
+                    try {
+                      // Auto-sélection du meilleur code après 1 seconde
+                      const bestCode = selectBestBarcode(newCodes);
+                      stopScanning();
+                      onScanSuccess(bestCode);
+                    } catch (error) {
+                      console.error('Erreur lors de la sélection du code:', error);
+                      stopScanning();
+                      onScanSuccess(decodedText); // Fallback au code original
+                    }
+                  }
+                }, 1000);
+                
+                return newCodes;
+              }
+              return prev;
+            });
+          } catch (error) {
+            console.error('Erreur lors du traitement du code:', error);
+            // En cas d'erreur, utiliser directement le code détecté
+            stopScanning();
+            onScanSuccess(decodedText);
+          }
+        },
+        (errorMessage) => {
+          // Erreur de scan (normal si rien n'est détecté)
+        }
+      );
+    } catch (err: unknown) {
+      console.error('Error starting scanner:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
+      setError(`Erreur lors du démarrage du scanner: ${errorMessage}`);
+      setIsScanning(false);
+      setShowManualInput(true);
+    }
+  };
 
   useEffect(() => {
     // Démarrer automatiquement le scan avec la meilleure caméra
@@ -87,7 +231,7 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
         if (isIOS && isChrome) {
           setError('⚠️ Chrome sur iOS ne supporte pas la caméra. Utilisez Safari ou entrez le code manuellement.');
         } else {
-          setError('Impossible d\'accéder à la caméra. Vous pouvez entrer le code manuellement.');
+          setError('Impossible d&apos;accéder à la caméra. Vous pouvez entrer le code manuellement.');
         }
         setShowManualInput(true);
       }
@@ -102,77 +246,6 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       }
     };
   }, []);
-
-  const startScanningWithCamera = async (cameraId: string) => {
-    try {
-      setError(null);
-      setIsScanning(true);
-      setDetectedCodes([]);
-
-      const html5QrCode = new Html5Qrcode('reader');
-      scannerRef.current = html5QrCode;
-
-      await html5QrCode.start(
-        cameraId,
-        {
-          fps: 10,
-          qrbox: { width: 300, height: 300 },
-          aspectRatio: 1.0,
-        },
-        (decodedText) => {
-          try {
-            console.log('Code détecté:', decodedText);
-            
-            // Ajouter le code à la liste des codes détectés
-            setDetectedCodes(prev => {
-              if (!prev.includes(decodedText)) {
-                const newCodes = [...prev, decodedText];
-                
-                // Si on a plusieurs codes, arrêter le scan et proposer la sélection
-                if (newCodes.length >= 2) {
-                  stopScanning();
-                  setShowCodeSelection(true);
-                  return newCodes;
-                }
-                
-                // Si c'est le premier code, continuer à scanner brièvement pour détecter d'autres codes
-                setTimeout(() => {
-                  if (newCodes.length === 1) {
-                    try {
-                      // Auto-sélection du meilleur code après 1 seconde
-                      const bestCode = selectBestBarcode(newCodes);
-                      stopScanning();
-                      onScanSuccess(bestCode);
-                    } catch (error) {
-                      console.error('Erreur lors de la sélection du code:', error);
-                      stopScanning();
-                      onScanSuccess(decodedText); // Fallback au code original
-                    }
-                  }
-                }, 1000);
-                
-                return newCodes;
-              }
-              return prev;
-            });
-          } catch (error) {
-            console.error('Erreur lors du traitement du code:', error);
-            // En cas d'erreur, utiliser directement le code détecté
-            stopScanning();
-            onScanSuccess(decodedText);
-          }
-        },
-        (errorMessage) => {
-          // Erreur de scan (normal si rien n'est détecté)
-        }
-      );
-    } catch (err: any) {
-      console.error('Error starting scanner:', err);
-      setError(`Erreur lors du démarrage du scanner: ${err.message || 'Erreur inconnue'}`);
-      setIsScanning(false);
-      setShowManualInput(true);
-    }
-  };
 
   const startScanning = async () => {
     if (!selectedCamera) {
@@ -189,53 +262,6 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
     }
   };
 
-  // Fonction pour choisir le meilleur code-barres
-  const selectBestBarcode = (codes: string[]): string => {
-    console.log('📊 Codes détectés:', codes);
-    
-    // Priorité 1 : Codes UPC-A (12 chiffres) - Standard mondial (USA, Canada, etc.)
-    const upcCodes = codes.filter(code => /^\d{12}$/.test(code));
-    if (upcCodes.length > 0) {
-      console.log('✅ Code UPC-A sélectionné:', upcCodes[0]);
-      return upcCodes[0];
-    }
-
-    // Priorité 2 : Codes EAN-13 (13 chiffres) commençant par 0 (souvent des UPC)
-    const ean13WithZero = codes.filter(code => /^0\d{12}$/.test(code));
-    if (ean13WithZero.length > 0) {
-      console.log('✅ Code EAN-13 (UPC format) sélectionné:', ean13WithZero[0]);
-      return ean13WithZero[0];
-    }
-
-    // Priorité 3 : Autres codes EAN-13 (13 chiffres)
-    const ean13Codes = codes.filter(code => /^\d{13}$/.test(code));
-    if (ean13Codes.length > 0) {
-      console.log('✅ Code EAN-13 sélectionné:', ean13Codes[0]);
-      return ean13Codes[0];
-    }
-
-    // Priorité 4 : Codes EAN-8 (8 chiffres)
-    const ean8Codes = codes.filter(code => /^\d{8}$/.test(code));
-    if (ean8Codes.length > 0) {
-      console.log('✅ Code EAN-8 sélectionné:', ean8Codes[0]);
-      return ean8Codes[0];
-    }
-
-    // Priorité 5 : EXCLURE les numéros de série (trop longs ou avec lettres)
-    // Les numéros de série ont souvent plus de 13 chiffres ou contiennent des lettres
-    const standardCodes = codes.filter(code => 
-      /^\d{8,13}$/.test(code) // Seulement les codes entre 8 et 13 chiffres
-    );
-    if (standardCodes.length > 0) {
-      console.log('✅ Code standard sélectionné:', standardCodes[0]);
-      return standardCodes[0];
-    }
-
-    // En dernier recours, prendre le premier code
-    console.log('⚠️ Aucun code standard, utilisation du premier:', codes[0]);
-    return codes[0];
-  };
-
   const handleCodeSelection = (selectedCode: string) => {
     try {
       setShowCodeSelection(false);
@@ -248,18 +274,6 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       setShowCodeSelection(false);
       setDetectedCodes([]);
       onClose();
-    }
-  };
-
-  const stopScanning = async () => {
-    if (scannerRef.current?.isScanning) {
-      try {
-        await scannerRef.current.stop();
-        scannerRef.current.clear();
-        setIsScanning(false);
-      } catch (err) {
-        console.error('Error stopping scanner:', err);
-      }
     }
   };
 
@@ -296,7 +310,7 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
         )}
 
         <div
-          id="reader"
+          id={scannerId}
           className={`w-full max-w-md ${isScanning ? '' : 'hidden'}`}
         ></div>
 
@@ -514,7 +528,7 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-white text-sm">
             <p className="font-semibold mb-2">💡 Conseils :</p>
             <ul className="space-y-1 text-white/80">
-              <li>• Assurez-vous d'avoir un bon éclairage</li>
+              <li>• Assurez-vous d&apos;avoir un bon éclairage</li>
               <li>• Tenez votre appareil stable</li>
               <li>• Cadrez le code dans la zone de scan</li>
             </ul>

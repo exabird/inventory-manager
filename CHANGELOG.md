@@ -1,9 +1,367 @@
 # Changelog
 
+## [0.1.11] - 2024-12-19
+
+### 🔧 Corrections
+- **Correction duplication scanner** : Résolution du problème d'affichage en double du scanner de code-barres
+- **ID unique scanner** : Génération d'ID unique pour éviter les conflits entre instances
+- **Nettoyage automatique** : Ajout du nettoyage automatique du scanner au démontage du composant
+- **Modal optimisée** : Amélioration du z-index et du positionnement de la modal scanner
+
+### 🎯 Améliorations
+- **Champ SKU modifiable** : Le champ code-barres est maintenant modifiable même sur produits existants
+- **Icône scanner intégrée** : Bouton scanner compact à côté du champ SKU
+- **Détection automatique** : Service de détection automatique des infos produit basé sur le code-barres
+- **Interface améliorée** : Meilleure UX pour le scan et la modification des codes-barres
+
+## [0.1.10] - 2024-12-19
+
+### 🎯 Nouvelle fonctionnalité : Système de statut des champs
+**Identification visuelle des champs fonctionnels vs non fonctionnels**
+
+#### Nouvelle fonctionnalité :
+- **Système de statut** : Marquage visuel des champs selon leur état fonctionnel
+- **Composants fonctionnels** : FunctionalInput, FunctionalTextarea, FunctionalSelect
+- **Configuration centralisée** : Statut de chaque champ défini dans fieldStatus.ts
+- **Indicateurs visuels** : Badges et couleurs pour distinguer les champs
+
+#### Fonctionnalités ajoutées :
+- ✅ **Badges de statut** : "Fonctionnel" (vert) vs "En développement" (bleu)
+- ✅ **Couleurs distinctives** : Champs non fonctionnels en bleu
+- ✅ **Messages explicatifs** : Raison du statut non fonctionnel
+- ✅ **Configuration flexible** : Facilement modifiable pour chaque champ
+- ✅ **Composants réutilisables** : FunctionalInput, FunctionalTextarea, FunctionalSelect
+
+#### Champs marqués comme fonctionnels :
+- ✅ Nom du produit, Référence interne, Quantité
+- ✅ Code-barres, Fabricant, Catégorie
+- ✅ Marque, Référence fabricant, Description courte
+- ✅ Prix d'achat HTVA, Prix de vente HTVA
+
+#### Champs marqués comme non fonctionnels :
+- 🔵 Métadonnées JSON (supplier, location, weight, etc.)
+- 🔵 Champs complexes (price_history, stock_history, etc.)
+- 🔵 Champs externes (website, external_links, etc.)
+
+#### Avantages :
+- **Transparence** : L'utilisateur sait quels champs fonctionnent
+- **Évite la confusion** : Plus de frustration avec les champs non sauvegardés
+- **Planification** : Facilite la priorisation des développements
+- **UX améliorée** : Interface plus claire et informative
+
+---
+
+### 🎯 Nouvelle fonctionnalité majeure : Système de statut des champs
+**Identification visuelle des champs fonctionnels vs non fonctionnels**
+
+#### Nouvelle fonctionnalité :
+- **Système de statut** : Marquage visuel des champs selon leur état fonctionnel
+- **Composants fonctionnels** : FunctionalInput, FunctionalTextarea, FunctionalSelect
+- **Configuration centralisée** : Statut de chaque champ défini dans fieldStatus.ts
+- **Indicateurs visuels** : Badges et couleurs pour distinguer les champs
+
+#### Fonctionnalités ajoutées :
+- ✅ **Badges de statut** : "Fonctionnel" (vert) vs "En développement" (bleu)
+- ✅ **Couleurs distinctives** : Champs non fonctionnels en bleu
+- ✅ **Messages explicatifs** : Raison du statut non fonctionnel
+- ✅ **Configuration flexible** : Facilement modifiable pour chaque champ
+- ✅ **Composants réutilisables** : FunctionalInput, FunctionalTextarea, FunctionalSelect
+
+#### Champs marqués comme fonctionnels :
+- ✅ Nom du produit, Référence interne, Quantité
+- ✅ Code-barres, Fabricant, Catégorie
+- ✅ Marque, Référence fabricant, Description courte
+- ✅ Prix d'achat HTVA, Prix de vente HTVA
+
+#### Champs marqués comme non fonctionnels :
+- 🔵 Métadonnées JSON (supplier, location, weight, etc.)
+- 🔵 Champs complexes (price_history, stock_history, etc.)
+- 🔵 Champs externes (website, external_links, etc.)
+
+#### Avantages :
+- **Transparence** : L'utilisateur sait quels champs fonctionnent
+- **Évite la confusion** : Plus de frustration avec les champs non sauvegardés
+- **Planification** : Facilite la priorisation des développements
+- **UX améliorée** : Interface plus claire et informative
+
+---
+
+### 🎨 Amélioration : Header ProductInspector informatif
+**Affichage des informations produit dans le header au lieu du texte générique**
+
+#### Améliorations apportées :
+- **Nom du produit** : Affiché comme titre principal dans le header
+- **Référence fabricant** : Affichée en petit sous le nom (si disponible)
+- **Badge de statut** : "En stock", "Stock faible" ou "Rupture" avec couleurs appropriées
+- **Quantité** : Nombre d'unités affiché à côté du badge
+- **Miniature** : Image featured du produit conservée
+
+#### Informations affichées :
+- ✅ **Titre** : Nom du produit (ex: "Pix9")
+- ✅ **Référence** : "Ref: [manufacturer_ref]" en petit
+- ✅ **Badge statut** : Couleur dynamique selon la quantité
+- ✅ **Quantité** : "[X] unités" avec police semi-bold
+- ✅ **Miniature** : Image featured du produit
+
+#### Logique des badges :
+- 🔴 **Rupture** : Quantité = 0 (badge rouge)
+- 🟡 **Stock faible** : Quantité < 5 (badge gris)
+- 🟢 **En stock** : Quantité ≥ 5 (badge vert)
+
+#### Résultat :
+- ✅ Header plus informatif et utile
+- ✅ Identification rapide du produit
+- ✅ Statut de stock visible immédiatement
+- ✅ Interface plus professionnelle
+
+---
+
+### 🔧 Correction : Colonnes manquantes dans la base de données
+**Résolution de l'erreur "Could not find the 'brand' column"**
+
+#### Corrections apportées :
+- **Colonnes manquantes** : Ajout de `brand`, `manufacturer_ref`, `short_description`, `selling_price_htva`, `purchase_price_htva`
+- **Schéma synchronisé** : Base de données alignée avec le code TypeScript
+- **Migration appliquée** : Toutes les colonnes nécessaires créées
+- **Erreur résolue** : Plus d'erreur lors du changement d'image featured
+
+#### Colonnes ajoutées :
+- ✅ `brand` (TEXT) : Marque du produit
+- ✅ `manufacturer_ref` (TEXT) : Référence fabricant
+- ✅ `short_description` (TEXT) : Description courte
+- ✅ `selling_price_htva` (DECIMAL) : Prix de vente HTVA
+- ✅ `purchase_price_htva` (DECIMAL) : Prix d'achat HTVA
+
+#### Résultat :
+- ✅ Changement d'image featured fonctionnel
+- ✅ Sauvegarde des données étendues possible
+- ✅ Interface ProductInspector entièrement fonctionnelle
+- ✅ Plus d'erreurs de schéma
+
+---
+
+### 🎨 Refonte UI/UX : Format carré et intégration ShadCN
+**Optimisation complète de l'interface avec composants ShadCN et format carré**
+
+#### Corrections apportées :
+- **Éléments dark mode** : Suppression des styles dark mode inappropriés
+- **Miniatures optimisées** : Taille plus grande et meilleure intégration
+- **Composants ShadCN** : Utilisation des composants Card, Badge, Button existants
+- **Format carré** : Images et zone d'upload en format carré uniforme
+
+#### Nouvelles fonctionnalités :
+- ✅ **Scroll horizontal** : Images sur une seule ligne avec défilement
+- ✅ **Format carré uniforme** : Toutes les images et zone d'upload en 24x24
+- ✅ **Zone d'upload intégrée** : Même format que les images dans le scroll
+- ✅ **Drag & Drop amélioré** : Réorganisation avec feedback visuel
+- ✅ **Interface compacte** : Moins d'espace vertical utilisé
+- ✅ **Composants ShadCN** : Design system cohérent
+
+#### Améliorations UX :
+- Interface plus moderne avec Card components
+- Miniatures plus grandes et mieux intégrées
+- Actions au survol plus intuitives
+- Scroll automatique vers les nouvelles images
+- Indicateurs visuels améliorés
+
+#### Composants créés :
+- `ImageUploaderSquare.tsx` : Version carrée avec scroll horizontal
+- `ProductListItem.tsx` : Refactorisé avec ShadCN components
+
+---
+
+### 🎨 Amélioration majeure : UI/UX et miniatures
+**Refonte complète de l'interface d'upload et intégration des miniatures**
+
+#### Corrections apportées :
+- **Erreur console** : Correction de l'affichage des erreurs dans ProductService
+- **ImageUploader compact** : Nouveau composant avec interface optimisée
+- **Drag & Drop** : Réorganisation des images par glisser-déposer
+- **Miniatures intégrées** : Affichage dans listes, cards et header
+
+#### Nouvelles fonctionnalités :
+- ✅ **Interface compacte** : Upload d'images plus ergonomique
+- ✅ **Drag & Drop réorganisation** : Ordre des images modifiable
+- ✅ **Miniatures automatiques** : Chargement depuis la DB
+- ✅ **Fallback intelligent** : Icônes par défaut si pas d'image
+- ✅ **Header avec miniature** : ProductInspector avec image featured
+- ✅ **Listes avec miniatures** : ProductListItem et ProductCard améliorés
+
+#### Composants créés :
+- `ImageUploaderCompact.tsx` : Version compacte avec drag & drop
+- `ProductThumbnail.tsx` : Composant réutilisable pour miniatures
+- Intégration dans `ProductInspector`, `ProductListItem`, `ProductCard`
+
+#### Améliorations UX :
+- Interface plus compacte et moderne
+- Actions rapides (featured, suppression) au survol
+- Indicateurs visuels pour l'image principale
+- Chargement asynchrone avec états de loading
+
+---
+
+### 🔧 Correction : Erreur Runtime ReferenceError
+**Résolution de l'erreur "dragOver is not defined"**
+
+#### Corrections apportées :
+- **Variables manquantes** : Ajout de `dragOver`, `setDragOver`, `isUploading`, `fileInputRef`
+- **Fichiers obsolètes** : Suppression de `ProductInspectorOld.tsx` et `ProductInspectorV2.tsx`
+- **Compilation TypeScript** : Erreurs de types résolues
+- **Build réussi** : Application compile sans erreurs
+
+#### Résultat :
+- ✅ Erreur Runtime ReferenceError corrigée
+- ✅ Compilation TypeScript réussie
+- ✅ Build Next.js sans erreurs
+- ✅ Application fonctionnelle
+
+---
+
+### 🔧 Correction majeure : Persistance des images
+**Résolution du problème de perte d'images après refresh**
+
+#### Corrections apportées :
+- **Table product_images** : Nouvelle table pour stocker les métadonnées des images
+- **Service ProductImageService** : Gestion complète des images avec CRUD
+- **Intégration base de données** : Images sauvegardées et chargées depuis la DB
+- **Système featured** : Gestion de l'image principale avec contraintes DB
+- **Chargement automatique** : Images existantes chargées au montage du composant
+
+#### Fonctionnalités ajoutées :
+- ✅ **Persistance complète** : Images conservées après refresh
+- ✅ **Chargement automatique** : Images existantes affichées au chargement
+- ✅ **Gestion featured** : Une seule image principale par produit
+- ✅ **Suppression propre** : Nettoyage Storage + DB
+- ✅ **Logs détaillés** : Traçabilité complète des opérations
+
+#### Changements techniques :
+- Nouvelle table `product_images` avec contraintes et index
+- Service `ProductImageService` avec méthodes CRUD complètes
+- Politiques RLS pour accès public (développement)
+- Intégration complète Storage + Database
+
+---
+
+### 🔧 Correction finale : Upload d'images fonctionnel
+**Résolution complète du problème d'upload avec politiques RLS**
+
+#### Corrections apportées :
+- **Politiques RLS mises à jour** : Accès anonyme autorisé pour le développement
+- **Test de connexion amélioré** : Utilisation d'un fichier PNG valide au lieu de texte
+- **Composant de test retiré** : Interface nettoyée après validation
+- **Configuration finale** : Bucket entièrement fonctionnel
+
+#### Résultat :
+- ✅ Bucket `product-images` accessible
+- ✅ Upload d'images fonctionnel
+- ✅ Politiques de sécurité configurées
+- ✅ Interface utilisateur propre
+
+---
+
+### 🔧 Correction : Upload d'images Supabase Storage
+**Résolution du problème d'upload d'images avec configuration complète**
+
+#### Corrections apportées :
+- **Bucket Supabase Storage** : Création du bucket `product-images` avec permissions RLS
+- **Politiques de sécurité** : Configuration des politiques pour lecture publique et upload authentifié
+- **Gestion d'erreurs améliorée** : Logs détaillés et messages d'erreur plus informatifs
+- **Composant de test** : Ajout temporaire d'un composant StorageTest pour diagnostic
+
+#### Configuration technique :
+- Bucket `product-images` créé avec limite de 5MB
+- Types MIME autorisés : JPEG, PNG, GIF, WebP
+- Politiques RLS pour utilisateurs authentifiés
+- Logs de debug pour traçabilité des uploads
+
+#### Améliorations UX :
+- Messages d'erreur plus clairs
+- Gestion des erreurs par fichier (continue même si un échoue)
+- Logs console pour diagnostic des problèmes
+
+---
+
+### 🔧 Amélioration majeure : Système d'onglets ProductInspector
+**Interface utilisateur révolutionnée avec organisation par onglets**
+
+#### Fonctionnalités ajoutées :
+- **Système d'onglets** : 7 onglets organisés (Favoris, Stock, Fournisseur, Spécifications, Dates, Web, Analytics)
+- **Section Favoris** : Données essentielles toujours visibles (images, nom, références, prix)
+- **Upload d'images** : Gestion complète avec Supabase Storage et système d'image featured
+- **Données étendues** : Support pour marque, référence fabricant, description courte, prix HTVA
+- **Composant Tabs** : Système d'onglets réutilisable avec icônes et badges
+
+#### Améliorations UX :
+- **Navigation intuitive** : Onglets avec icônes contextuelles
+- **Workflow optimisé** : Données essentielles dans l'onglet Favoris
+- **Reprises intelligentes** : Données importantes reprises dans les onglets pertinents
+- **Interface mobile** : Onglets adaptés aux petits écrans
+
+#### Changements techniques :
+- Nouveau composant `ImageUploader` avec gestion Supabase Storage
+- Nouveau composant `Tabs` réutilisable
+- Extension du modèle `ProductFormData` avec nouvelles propriétés
+- Configuration Supabase Storage pour bucket `product-images`
+
+---
+
+### 🚀 NOUVELLE FEATURE COMPLÈTE : ProductInspector
+**Système d'édition avancé des produits avec métadonnées complètes**
+
+#### Fonctionnalités principales :
+- **ProductInspector** : Sidebar d'édition complète et professionnelle
+- **Métadonnées avancées** : Support pour prix d'achat/vente, fournisseur, emplacement, poids, dimensions, date d'expiration, SKU
+- **Calcul automatique de marge** : Affichage de la marge bénéficiaire en pourcentage et en euros
+- **Aperçu d'image** : Visualisation en temps réel des images de produits
+- **Composant ClientOnly** : Protection contre les erreurs d'hydratation Next.js
+
+### 🔧 Améliorations
+- **Interface utilisateur** : Lignes de produits cliquables au lieu de boutons séparés
+- **Expérience mobile** : Sidebar responsive avec overlay semi-transparent
+- **Organisation des données** : Sections structurées (Informations de base, Stock et Prix, Logistiques, Médias)
+- **Icônes contextuelles** : Icônes appropriées pour chaque section et champ
+- **Badges de statut** : Indicateurs visuels dynamiques (rupture/stock faible/en stock)
+
+### 🐛 Corrections
+- **Erreurs d'hydratation** : Résolution des problèmes SSR/client avec les extensions Chrome
+- **Configuration Next.js** : Optimisation des imports et gestion mémoire améliorée
+- **Métadonnées** : Mise à jour du titre et langue de l'application (fr)
+- **Composants modaux** : Encapsulation dans ClientOnly pour éviter les erreurs d'hydratation
+
+### 📦 Changements techniques
+- Suppression des boutons Edit/Delete des ProductListItem et ProductCard
+- Remplacement du Dialog par ProductInspector dans page.tsx
+- Ajout de vérifications d'hydratation pour les composants sensibles
+- Optimisation de la configuration Next.js avec `optimizePackageImports`
+
+---
+
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
+
+## [0.0.23] - 2025-01-22
+
+### 📋 Amélioration des processus
+- **Processus de développement strict** : Nouveau workflow obligatoire avec validation utilisateur
+- **Tests locaux complets** : Compilation, linting, types, serveur, navigateur, Supabase
+- **Validation utilisateur obligatoire** : Attendre validation avant déploiement
+- **Déploiement via MCP** : Push GitHub + vérification logs Vercel après 45s
+- **Checklist détaillée** : Processus étape par étape pour éviter les erreurs
+
+### 🛠️ Outils MCP documentés
+- **MCP Supabase** : Logs API, Database, Auth, Storage, Edge Functions
+- **MCP Vercel** : Logs déploiement, runtime, métriques, déploiements
+- **MCP GitHub** : Push automatique, PR, Issues, Actions CI/CD
+
+### 🎯 Impact
+- **Qualité améliorée** : Moins d'erreurs en production grâce aux tests stricts
+- **Processus reproductible** : Workflow standardisé pour tous les développements
+- **Validation garantie** : Pas de déploiement sans validation utilisateur
+- **Monitoring complet** : Vérification logs à tous les niveaux
+
+---
 
 ## [0.0.22] - 2025-01-22
 

@@ -1,22 +1,36 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Camera, Package, Loader2, Grid3X3, List, Filter } from 'lucide-react';
+import { Search, Plus, Camera, Package, Loader2, Grid3X3, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 import { Product } from '@/lib/supabase';
 import { ProductService } from '@/lib/services';
 import ProductCard from '@/components/inventory/ProductCard';
 import ProductListItem from '@/components/inventory/ProductListItem';
-import ProductForm from '@/components/inventory/ProductForm';
+import ProductInspector from '@/components/inventory/ProductInspector';
 import BarcodeScanner from '@/components/scanner/BarcodeScanner';
+import ClientOnly from '@/components/ui/ClientOnly';
+
+// Interface pour les données du formulaire
+interface ProductFormData {
+  barcode: string | null;
+  name: string;
+  manufacturer: string | null;
+  internal_ref: string | null;
+  quantity: number;
+  category_id: string | null;
+  image_url: string | null;
+  notes: string | null;
+  metadata: Record<string, unknown>;
+  // Nouvelles données essentielles
+  manufacturer_ref: string | null;
+  brand: string | null;
+  short_description: string | null;
+  selling_price_htva: number | null;
+  purchase_price_htva: number | null;
+  warranty_period: string | null;
+}
 import { APP_VERSION } from '@/lib/version';
 
 export default function Home() {
@@ -125,7 +139,7 @@ export default function Home() {
     }
   };
 
-  const handleAddProduct = async (data: any) => {
+  const handleAddProduct = async (data: ProductFormData) => {
     setIsSubmitting(true);
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -158,6 +172,13 @@ export default function Home() {
           image_url: data.image_url || null,
           notes: data.notes || null,
           metadata: {},
+          // Nouveaux champs
+          manufacturer_ref: data.manufacturer_ref,
+          brand: data.brand,
+          short_description: data.short_description,
+          selling_price_htva: data.selling_price_htva,
+          purchase_price_htva: data.purchase_price_htva,
+          warranty_period: data.warranty_period,
         });
         setSuccessMessage('Produit ajouté avec succès !');
       }
@@ -174,16 +195,17 @@ export default function Home() {
       }, 1500); // Délai pour voir le message de succès
       
       console.log('Produit enregistré avec succès');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erreur lors de l\'enregistrement:', error);
-      setErrorMessage(error.message || 'Erreur lors de l\'enregistrement du produit');
+      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de l\'enregistrement du produit';
+      setErrorMessage(errorMessage);
       // Le formulaire reste ouvert en cas d'erreur
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleEditProduct = (product: Product) => {
+  const handleSelectProduct = (product: Product) => {
     setEditingProduct(product);
     setShowProductForm(true);
   };
@@ -192,8 +214,6 @@ export default function Home() {
     const success = await ProductService.delete(id);
     if (success) {
       await loadProducts();
-    } else {
-      alert('Erreur lors de la suppression du produit.');
     }
   };
 
@@ -255,6 +275,7 @@ export default function Home() {
             </div>
           </div>
 
+
           {/* Statistiques */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
             <div className="bg-blue-50 rounded-lg p-3">
@@ -274,6 +295,7 @@ export default function Home() {
               <p className="text-2xl font-bold text-red-900">{stats.outOfStock}</p>
             </div>
           </div>
+
 
           {/* Barre de recherche */}
           <div className="relative mb-4">
@@ -424,8 +446,7 @@ export default function Home() {
                   <ProductListItem
                     key={product.id}
                     product={product}
-                    onEdit={handleEditProduct}
-                    onDelete={handleDeleteProduct}
+                    onSelect={handleSelectProduct}
                     onQuantityChange={handleQuantityChange}
                   />
                 ))}
@@ -436,8 +457,7 @@ export default function Home() {
                   <ProductCard
                     key={product.id}
                     product={product}
-                    onEdit={handleEditProduct}
-                    onDelete={handleDeleteProduct}
+                    onEdit={handleSelectProduct}
                     onQuantityChange={handleQuantityChange}
                   />
                 ))}
@@ -448,76 +468,28 @@ export default function Home() {
       </div>
 
       {/* Scanner Modal */}
-      {showScanner && (
-        <BarcodeScanner
-          onScanSuccess={handleScanSuccess}
-          onClose={() => setShowScanner(false)}
-        />
-      )}
+      <ClientOnly>
+        {showScanner && (
+          <BarcodeScanner
+            onScanSuccess={handleScanSuccess}
+            onClose={() => setShowScanner(false)}
+          />
+        )}
+      </ClientOnly>
 
-      {/* Formulaire de produit */}
-      <Dialog open={showProductForm} onOpenChange={setShowProductForm}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingProduct ? 'Modifier le produit' : 'Ajouter un produit'}
-            </DialogTitle>
-          </DialogHeader>
-          
-          {/* Messages de notification */}
-          {errorMessage && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-red-800 font-medium">
-                    {errorMessage}
-                  </p>
-                </div>
-                <div className="ml-auto pl-3">
-                  <button
-                    onClick={() => setErrorMessage(null)}
-                    className="text-red-400 hover:text-red-600"
-                  >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {successMessage && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-green-800 font-medium">
-                    {successMessage}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          <ProductForm
+      {/* Product Inspector Sidebar */}
+      <ClientOnly>
+        {showProductForm && (
+          <ProductInspector
             product={editingProduct}
             barcode={scannedBarcode || undefined}
             onSubmit={handleAddProduct}
-            onCancel={handleCloseForm}
+            onDelete={handleDeleteProduct}
+            onClose={handleCloseForm}
             isLoading={isSubmitting}
           />
-        </DialogContent>
-      </Dialog>
+        )}
+      </ClientOnly>
     </main>
   );
 }

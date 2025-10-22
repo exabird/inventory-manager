@@ -68,7 +68,7 @@ export const ProductService = {
       .single();
 
     if (error) {
-      console.error('Error updating product:', error);
+      console.error('Error updating product:', error.message || error);
       return null;
     }
 
