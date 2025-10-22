@@ -41,21 +41,22 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
             return (label.includes('ultra') && label.includes('back')) ||
                    (label.includes('ultra') && label.includes('rear')) ||
                    (label.includes('ultra') && label.includes('environment')) ||
-                   (label.includes('ultra') && !label.includes('front'));
+                   (label.includes('ultra') && !label.includes('front') && !label.includes('avant'));
           });
           
-          // Priorité 2: Caméra arrière normale (différentes variantes)
+          // Priorité 2: Caméra arrière normale (différentes variantes) - EXCLURE front/avant
           const backCamera = devices.find((device) => {
             const label = device.label.toLowerCase();
-            return (label.includes('back') && !label.includes('front')) ||
-                   (label.includes('rear') && !label.includes('front')) ||
-                   (label.includes('environment') && !label.includes('front'));
+            return (label.includes('back') && !label.includes('front') && !label.includes('avant')) ||
+                   (label.includes('rear') && !label.includes('front') && !label.includes('avant')) ||
+                   (label.includes('environment') && !label.includes('front') && !label.includes('avant'));
           });
           
-          // Priorité 3: Caméra avec "environment" ou "rear"
+          // Priorité 3: Caméra avec "environment" ou "rear" - EXCLURE front/avant
           const rearCamera = devices.find((device) => {
             const label = device.label.toLowerCase();
-            return label.includes('environment') || label.includes('rear');
+            return (label.includes('environment') || label.includes('rear')) && 
+                   !label.includes('front') && !label.includes('avant');
           });
           
           const bestCamera = ultraWideBackCamera?.id || 
@@ -119,34 +120,47 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
           aspectRatio: 1.0,
         },
         (decodedText) => {
-          console.log('Code détecté:', decodedText);
-          
-          // Ajouter le code à la liste des codes détectés
-          setDetectedCodes(prev => {
-            if (!prev.includes(decodedText)) {
-              const newCodes = [...prev, decodedText];
-              
-              // Si on a plusieurs codes, arrêter le scan et proposer la sélection
-              if (newCodes.length >= 2) {
-                stopScanning();
-                setShowCodeSelection(true);
+          try {
+            console.log('Code détecté:', decodedText);
+            
+            // Ajouter le code à la liste des codes détectés
+            setDetectedCodes(prev => {
+              if (!prev.includes(decodedText)) {
+                const newCodes = [...prev, decodedText];
+                
+                // Si on a plusieurs codes, arrêter le scan et proposer la sélection
+                if (newCodes.length >= 2) {
+                  stopScanning();
+                  setShowCodeSelection(true);
+                  return newCodes;
+                }
+                
+                // Si c'est le premier code, continuer à scanner brièvement pour détecter d'autres codes
+                setTimeout(() => {
+                  if (newCodes.length === 1) {
+                    try {
+                      // Auto-sélection du meilleur code après 1 seconde
+                      const bestCode = selectBestBarcode(newCodes);
+                      stopScanning();
+                      onScanSuccess(bestCode);
+                    } catch (error) {
+                      console.error('Erreur lors de la sélection du code:', error);
+                      stopScanning();
+                      onScanSuccess(decodedText); // Fallback au code original
+                    }
+                  }
+                }, 1000);
+                
                 return newCodes;
               }
-              
-              // Si c'est le premier code, continuer à scanner brièvement pour détecter d'autres codes
-              setTimeout(() => {
-                if (newCodes.length === 1) {
-                  // Auto-sélection du meilleur code après 1 seconde
-                  const bestCode = selectBestBarcode(newCodes);
-                  stopScanning();
-                  onScanSuccess(bestCode);
-                }
-              }, 1000);
-              
-              return newCodes;
-            }
-            return prev;
-          });
+              return prev;
+            });
+          } catch (error) {
+            console.error('Erreur lors du traitement du code:', error);
+            // En cas d'erreur, utiliser directement le code détecté
+            stopScanning();
+            onScanSuccess(decodedText);
+          }
         },
         (errorMessage) => {
           // Erreur de scan (normal si rien n'est détecté)
@@ -212,10 +226,18 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
   };
 
   const handleCodeSelection = (selectedCode: string) => {
-    setShowCodeSelection(false);
-    setDetectedCodes([]);
-    onScanSuccess(selectedCode);
-    onClose();
+    try {
+      setShowCodeSelection(false);
+      setDetectedCodes([]);
+      onScanSuccess(selectedCode);
+      onClose();
+    } catch (error) {
+      console.error('Erreur lors de la sélection du code:', error);
+      // En cas d'erreur, fermer quand même l'interface
+      setShowCodeSelection(false);
+      setDetectedCodes([]);
+      onClose();
+    }
   };
 
   const stopScanning = async () => {
