@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Search, Plus, Camera, Package, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,8 +31,9 @@ export default function Home() {
 
   // Charger les produits au montage
   useEffect(() => {
+    console.log('🚀 useEffect montage - Appel de loadProducts()');
     loadProducts();
-  }, []);
+  }, [loadProducts]);
 
   // Filtrer les produits lors de la recherche
   useEffect(() => {
@@ -51,22 +52,23 @@ export default function Home() {
     }
   }, [searchQuery, products]);
 
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     try {
       setIsLoading(true);
-      console.log('Chargement des produits...');
+      console.log('🔄 Chargement des produits...');
       const data = await ProductService.getAll();
-      console.log('Produits chargés:', data.length);
+      console.log('✅ Produits charges:', data.length, data);
       setProducts(data);
       setFilteredProducts(data);
     } catch (error) {
-      console.error('Erreur lors du chargement des produits:', error);
+      console.error('❌ Erreur lors du chargement des produits:', error);
       setProducts([]);
       setFilteredProducts([]);
     } finally {
       setIsLoading(false);
+      console.log('✅ isLoading mis a false');
     }
-  };
+  }, []);
 
   const handleScanSuccess = async (barcode: string) => {
     try {
