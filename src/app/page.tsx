@@ -111,11 +111,11 @@ export default function Home() {
       console.log('Enregistrement du produit:', data);
       
       // Validation des champs requis
+      if (!data.internal_ref || data.internal_ref.trim() === '') {
+        throw new Error('La référence interne est requise');
+      }
       if (!data.name || data.name.trim() === '') {
         throw new Error('Le nom du produit est requis');
-      }
-      if (!data.barcode || data.barcode.trim() === '') {
-        throw new Error('Le code-barres est requis');
       }
       
       if (editingProduct) {

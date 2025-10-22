@@ -85,8 +85,8 @@ export default function ProductForm({
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
     
-    if (!formData.barcode || formData.barcode.trim() === '') {
-      errors.barcode = 'Le code-barres est requis';
+    if (!formData.internal_ref || formData.internal_ref.trim() === '') {
+      errors.internal_ref = 'La référence interne est requise';
     }
     
     if (!formData.name || formData.name.trim() === '') {
@@ -121,18 +121,14 @@ export default function ProductForm({
     <form onSubmit={handleFormSubmit} className="space-y-6">
       {/* Code-barres */}
       <div className="space-y-2">
-        <Label htmlFor="barcode">Code-barres / QR Code *</Label>
+        <Label htmlFor="barcode">Code-barres / QR Code</Label>
         <Input
           id="barcode"
           value={formData.barcode}
           onChange={(e) => handleInputChange('barcode', e.target.value)}
           placeholder="1234567890123"
           disabled={!!product}
-          className={validationErrors.barcode ? 'border-red-500' : ''}
         />
-        {validationErrors.barcode && (
-          <p className="text-sm text-red-600">{validationErrors.barcode}</p>
-        )}
       </div>
 
       {/* Nom */}
@@ -163,18 +159,22 @@ export default function ProductForm({
 
       {/* Référence interne */}
       <div className="space-y-2">
-        <Label htmlFor="internal_ref">Référence interne</Label>
+        <Label htmlFor="internal_ref">Référence interne *</Label>
         <Input
           id="internal_ref"
           value={formData.internal_ref || ''}
           onChange={(e) => handleInputChange('internal_ref', e.target.value)}
           placeholder="Ex: REF-12345"
+          className={validationErrors.internal_ref ? 'border-red-500' : ''}
         />
+        {validationErrors.internal_ref && (
+          <p className="text-sm text-red-600">{validationErrors.internal_ref}</p>
+        )}
       </div>
 
       {/* Quantité */}
       <div className="space-y-2">
-        <Label htmlFor="quantity">Quantité en stock *</Label>
+        <Label htmlFor="quantity">Quantité en stock</Label>
         <Input
           id="quantity"
           type="number"
