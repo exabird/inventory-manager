@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Brain, Save, Key, Shield } from 'lucide-react';
+import { Brain, Save, Key, Shield, Info } from 'lucide-react';
+import { APP_VERSION, APP_NAME } from '@/lib/version';
 
 export default function SettingsPage() {
   const [claudeApiKey, setClaudeApiKey] = useState('');
@@ -229,6 +230,43 @@ Règles importantes:
             </Badge>
           )}
         </div>
+
+        {/* À propos */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Info className="h-5 w-5" />
+              <CardTitle>À propos</CardTitle>
+            </div>
+            <CardDescription>
+              Informations sur l'application
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Application</span>
+                <Badge variant="secondary">{APP_NAME}</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Version</span>
+                <Badge variant="default">v{APP_VERSION}</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Environnement</span>
+                <Badge variant="outline">
+                  {process.env.NODE_ENV === 'production' ? 'Production' : 'Développement'}
+                </Badge>
+              </div>
+            </div>
+            
+            <div className="pt-4 border-t">
+              <p className="text-xs text-muted-foreground">
+                © 2025 {APP_NAME}. Tous droits réservés.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

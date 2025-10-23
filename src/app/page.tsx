@@ -148,8 +148,6 @@ export default function Home() {
     <>
       <main className="min-h-screen">
         <div className="p-4">
-          <h1 className="text-2xl font-bold mb-4">Inventory Manager</h1>
-          
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20">
               <Loader2 className="h-12 w-12 animate-spin text-blue-600 mb-4" />
@@ -169,22 +167,6 @@ export default function Home() {
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-gray-600">
-                  {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''}
-                  {searchQuery && ' trouvé' + (filteredProducts.length > 1 ? 's' : '')}
-                </p>
-                {searchQuery && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSearchQuery('')}
-                  >
-                    Effacer
-                  </Button>
-                )}
-              </div>
-
               {/* Liste de produits avec filtres et colonnes */}
               <CompactProductList
                 products={filteredProducts}

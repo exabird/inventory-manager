@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { APP_VERSION } from '@/lib/version';
 
 interface NavItem {
   id: string;
@@ -62,7 +63,7 @@ export default function Sidebar() {
         {/* Header */}
         <div className="p-6 border-b">
           <h1 className="text-xl font-bold">Inventory Manager</h1>
-          <p className="text-sm text-muted-foreground">v0.1.14</p>
+          <p className="text-sm text-muted-foreground">v{APP_VERSION}</p>
         </div>
 
         {/* Navigation */}
