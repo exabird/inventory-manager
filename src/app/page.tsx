@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Product } from '@/lib/supabase';
 import { ProductService } from '@/lib/services';
 import ProductCard from '@/components/inventory/ProductCard';
-import ProductListItem from '@/components/inventory/ProductListItem';
+import CompactProductList from '@/components/inventory/CompactProductList';
 import ProductInspector from '@/components/inventory/ProductInspector';
 import BarcodeScanner from '@/components/scanner/BarcodeScanner';
 import ClientOnly from '@/components/ui/ClientOnly';
@@ -236,9 +236,10 @@ export default function Home() {
     }
   };
 
-  const handleSelectProduct = (product: Product) => {
+  const handleStockEdit = (product: Product) => {
     setEditingProduct(product);
     setShowProductForm(true);
+    // TODO: Ouvrir directement l'onglet Stock dans l'inspecteur
   };
 
   const handleDeleteProduct = async (id: string) => {
@@ -337,17 +338,6 @@ export default function Home() {
           </div>
 
 
-          {/* Barre de recherche */}
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Rechercher un produit..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
 
           {/* Filtres et contrôles de vue */}
           <div className="flex items-center justify-between mb-4">
@@ -481,16 +471,13 @@ export default function Home() {
 
             {/* Affichage conditionnel selon le mode de vue */}
             {viewMode === 'list' ? (
-              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                {filteredProducts.map((product) => (
-                  <ProductListItem
-                    key={product.id}
-                    product={product}
-                    onSelect={handleSelectProduct}
-                    onQuantityChange={handleQuantityChange}
-                  />
-                ))}
-              </div>
+              <CompactProductList
+                products={filteredProducts}
+                onProductSelect={handleSelectProduct}
+                onStockEdit={handleStockEdit}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+              />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredProducts.map((product) => (
