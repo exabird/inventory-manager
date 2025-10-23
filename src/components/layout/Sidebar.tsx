@@ -60,10 +60,43 @@ export default function Sidebar() {
     <>
       {/* Sidebar Desktop - Toujours visible */}
       <aside className="hidden md:flex md:flex-col md:w-64 md:border-r md:bg-card md:fixed md:inset-y-0 md:left-0">
-        {/* Header */}
+        {/* Header avec Logo */}
         <div className="p-6 border-b">
-          <h1 className="text-xl font-bold">Inventory Manager</h1>
-          <p className="text-sm text-muted-foreground">v{APP_VERSION}</p>
+          {/* Logo */}
+          <div className="mb-4 flex justify-center">
+            <div className="relative">
+              <svg 
+                width="64" 
+                height="64" 
+                viewBox="0 0 64 64" 
+                fill="none" 
+                xmlns="http://www.w3.org/2000/svg"
+                className="drop-shadow-lg"
+              >
+                {/* Fond du carton */}
+                <rect x="8" y="12" width="48" height="40" rx="4" fill="hsl(var(--primary))" opacity="0.9"/>
+                
+                {/* Lignes de code-barres */}
+                <line x1="16" y1="24" x2="16" y2="36" stroke="white" strokeWidth="2"/>
+                <line x1="20" y1="24" x2="20" y2="36" stroke="white" strokeWidth="1"/>
+                <line x1="23" y1="24" x2="23" y2="36" stroke="white" strokeWidth="3"/>
+                <line x1="28" y1="24" x2="28" y2="36" stroke="white" strokeWidth="1"/>
+                <line x1="31" y1="24" x2="31" y2="36" stroke="white" strokeWidth="2"/>
+                <line x1="35" y1="24" x2="35" y2="36" stroke="white" strokeWidth="1"/>
+                <line x1="38" y1="24" x2="38" y2="36" stroke="white" strokeWidth="3"/>
+                <line x1="43" y1="24" x2="43" y2="36" stroke="white" strokeWidth="2"/>
+                <line x1="47" y1="24" x2="47" y2="36" stroke="white" strokeWidth="1"/>
+                
+                {/* Badge AI */}
+                <circle cx="50" cy="18" r="10" fill="hsl(var(--accent))" stroke="white" strokeWidth="2"/>
+                <text x="50" y="22" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">AI</text>
+              </svg>
+            </div>
+          </div>
+          
+          {/* Titre */}
+          <h1 className="text-xl font-bold text-center">Inventory Manager</h1>
+          <p className="text-sm text-muted-foreground text-center">v{APP_VERSION}</p>
         </div>
 
         {/* Navigation */}
