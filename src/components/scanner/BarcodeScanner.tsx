@@ -175,29 +175,21 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       console.log('📱 [BarcodeScanner] iPhone détecté:', isIPhone);
 
       const config = {
-        fps: 30,  // FPS élevé pour plus d'opportunités de scan à distance
+        fps: 30,  // 30 FPS pour balance performance/qualité
         qrbox: function(viewfinderWidth: number, viewfinderHeight: number) {
-          // Zone très large (95%x60%) pour capturer de plus loin
-          const width = Math.floor(viewfinderWidth * 0.95);
-          const height = Math.floor(viewfinderHeight * 0.6);
+          // Zone MAXIMALE (98%x70%) pour scan à distance optimale
+          const width = Math.floor(viewfinderWidth * 0.98);
+          const height = Math.floor(viewfinderHeight * 0.7);
           console.log('📐 [BarcodeScanner] Zone de scan:', width, 'x', height);
           return { width, height };
         },
         disableFlip: false,
-        // Configuration vidéo haute résolution pour scan à distance
-        videoConstraints: isIPhone ? {
+        // Configuration vidéo optimisée - contraintes souples pour compatibilité
+        videoConstraints: {
           facingMode: 'environment',
-          width: { ideal: 3840, min: 1920 },      // 4K si dispo, sinon Full HD
-          height: { ideal: 2160, min: 1080 },     // Meilleure qualité = scan + loin
-          aspectRatio: { ideal: 16/9 },
-          focusMode: { ideal: 'continuous' },     // Focus continu
-          zoom: { ideal: 1.5, max: 3 }            // Zoom léger pour portée
-        } : {
-          facingMode: 'environment',
-          width: { ideal: 3840, min: 1920 },
-          height: { ideal: 2160, min: 1080 },
-          focusMode: { ideal: 'continuous' },
-          zoom: { ideal: 1.5, max: 3 }
+          width: { ideal: 1920 },       // Full HD (plus compatible)
+          height: { ideal: 1080 },      // Full HD (plus compatible)
+          aspectRatio: { ideal: 16/9 }
         },
         // Formats supportés (tous les codes-barres standards)
         formatsToSupport: [
@@ -843,9 +835,10 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-white text-sm">
             <p className="font-semibold mb-2">💡 Conseils :</p>
             <ul className="space-y-1 text-white/80">
-              <li>• Assurez-vous d&apos;avoir un bon éclairage</li>
+              <li>• Utilisez le bouton Flash pour scanner de plus loin</li>
               <li>• Tenez votre appareil stable</li>
-              <li>• Cadrez le code dans la zone de scan</li>
+              <li>• Le code peut être détecté à 20-30cm de distance</li>
+              <li>• Cadrez le code dans la grande zone de scan</li>
             </ul>
           </div>
         </div>
