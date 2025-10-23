@@ -38,8 +38,15 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
   useEffect(() => {
     return () => {
       if (scannerRef.current) {
-        scannerRef.current.stop().catch(console.error);
-        scannerRef.current.clear();
+        try {
+          const state = scannerRef.current.getState();
+          if (state === 2) { // SCANNING
+            scannerRef.current.stop().catch(console.error);
+          }
+          scannerRef.current.clear();
+        } catch (err) {
+          console.error('❌ [BarcodeScanner.cleanup] Erreur:', err);
+        }
       }
     };
   }, []);
@@ -140,7 +147,8 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       // Arrêter et nettoyer le scanner existant
       if (scannerRef.current) {
         try {
-          if (scannerRef.current.isScanning) {
+          const state = await scannerRef.current.getState();
+          if (state === 2) { // SCANNING
             await scannerRef.current.stop();
           }
           scannerRef.current.clear();
@@ -341,7 +349,10 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
         if (scannerRef.current) {
           console.log('⚠️ Scanner déjà initialisé, nettoyage...');
           try {
-            await scannerRef.current.stop();
+            const state = await scannerRef.current.getState();
+            if (state === 2) { // SCANNING
+              await scannerRef.current.stop();
+            }
             scannerRef.current.clear();
           } catch (err) {
             console.warn('Erreur lors du nettoyage du scanner:', err);
@@ -427,11 +438,16 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       isMountedRef.current = false;
       // Nettoyer le scanner lors du démontage
       if (scannerRef.current) {
-        if (scannerRef.current.isScanning) {
-          scannerRef.current.stop().catch(console.error);
+        try {
+          const state = scannerRef.current.getState();
+          if (state === 2) { // SCANNING
+            scannerRef.current.stop().catch(console.error);
+          }
+          scannerRef.current.clear();
+          scannerRef.current = null;
+        } catch (err) {
+          console.error('❌ [BarcodeScanner.unmount] Erreur:', err);
         }
-        scannerRef.current.clear();
-        scannerRef.current = null;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
