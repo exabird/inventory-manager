@@ -1,11 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Filter, Package, Hash, Tag, ArrowUpFromLine, ArrowDownToLine, Edit3 } from 'lucide-react';
+import { Search, Filter, Package, Hash, Tag, ArrowUpFromLine, ArrowDownToLine, Edit3, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import CompactProductListItem from '@/components/inventory/CompactProductListItem';
+import FilterModal from '@/components/inventory/FilterModal';
 import { Product } from '@/lib/supabase';
+
+type SortField = 'name' | 'manufacturer_ref' | 'category' | 'quantity' | 'selling_price_htva' | 'purchase_price_htva';
+type SortDirection = 'asc' | 'desc' | null;
+
+interface SortConfig {
+  field: SortField | null;
+  direction: SortDirection;
+}
+
+interface FilterConfig {
+  categories: string[];
+  stockStatus: ('in-stock' | 'low-stock' | 'out-of-stock')[];
+  priceRange: { min: number | null; max: number | null };
+}
 
 interface CompactProductListProps {
   products: (Product & { categories?: { name: string } })[];
@@ -22,6 +37,59 @@ export default function CompactProductList({
   searchQuery,
   onSearchChange
 }: CompactProductListProps) {
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ field: null, direction: null });
+  const [filterConfig, setFilterConfig] = useState<FilterConfig>({
+    categories: [],
+    stockStatus: [],
+    priceRange: { min: null, max: null }
+  });
+  const [showFilterModal, setShowFilterModal] = useState(false);
+
+  // Fonction de tri
+  const handleSort = (field: SortField) => {
+    let newDirection: SortDirection = 'asc';
+    
+    if (sortConfig.field === field) {
+      if (sortConfig.direction === 'asc') {
+        newDirection = 'desc';
+      } else if (sortConfig.direction === 'desc') {
+        newDirection = null;
+      }
+    }
+    
+    setSortConfig({ field: newDirection ? field : null, direction: newDirection });
+  };
+
+  // Fonction pour obtenir l'icône de tri
+  const getSortIcon = (field: SortField) => {
+    if (sortConfig.field !== field) {
+      return <ChevronsUpDown className="h-3 w-3 text-gray-400" />;
+    }
+    
+    if (sortConfig.direction === 'asc') {
+      return <ChevronUp className="h-3 w-3 text-gray-600" />;
+    } else if (sortConfig.direction === 'desc') {
+      return <ChevronDown className="h-3 w-3 text-gray-600" />;
+    }
+    
+    return <ChevronsUpDown className="h-3 w-3 text-gray-400" />;
+  };
+
+  // Fonction pour appliquer les filtres
+  const applyFilters = (newFilterConfig: FilterConfig) => {
+    setFilterConfig(newFilterConfig);
+    setShowFilterModal(false);
+  };
+
+  // Fonction pour réinitialiser les filtres
+  const resetFilters = () => {
+    setFilterConfig({
+      categories: [],
+      stockStatus: [],
+      priceRange: { min: null, max: null }
+    });
+  };
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
       {/* Header avec recherche et filtre */}
@@ -44,6 +112,7 @@ export default function CompactProductList({
             variant="outline"
             size="sm"
             className="h-9 px-3"
+            onClick={() => setShowFilterModal(true)}
           >
             <Filter className="h-4 w-4 mr-2" />
             Filtre
@@ -60,41 +129,67 @@ export default function CompactProductList({
           {/* Image */}
           <div className="w-12"></div>
           
-          {/* Nom */}
-          <div className="flex-1">Produit</div>
+          {/* Nom - Triable */}
+          <button 
+            className="flex-1 flex items-center gap-1 hover:text-gray-800 transition-colors"
+            onClick={() => handleSort('name')}
+          >
+            <span>Produit</span>
+            {getSortIcon('name')}
+          </button>
           
-          {/* Référence fabricant */}
-          <div className="w-24 flex items-center gap-1">
+          {/* Référence fabricant - Triable */}
+          <button 
+            className="w-24 flex items-center gap-1 hover:text-gray-800 transition-colors"
+            onClick={() => handleSort('manufacturer_ref')}
+          >
             <Hash className="h-3 w-3" />
             <span>Réf.</span>
-          </div>
+            {getSortIcon('manufacturer_ref')}
+          </button>
           
-          {/* Catégorie */}
-          <div className="w-32 flex items-center gap-1">
+          {/* Catégorie - Triable */}
+          <button 
+            className="w-32 flex items-center gap-1 hover:text-gray-800 transition-colors"
+            onClick={() => handleSort('category')}
+          >
             <Tag className="h-3 w-3" />
             <span>Catégorie</span>
-          </div>
+            {getSortIcon('category')}
+          </button>
           
           {/* Statut */}
           <div className="w-20">Statut</div>
           
-          {/* Stock */}
-          <div className="w-16 flex items-center justify-center gap-1">
+          {/* Stock - Triable */}
+          <button 
+            className="w-16 flex items-center justify-center gap-1 hover:text-gray-800 transition-colors"
+            onClick={() => handleSort('quantity')}
+          >
             <Package className="h-3 w-3" />
             <span>Stock</span>
-          </div>
+            {getSortIcon('quantity')}
+          </button>
           
-          {/* Prix vente */}
-          <div className="w-20 flex items-center justify-center gap-1">
+          {/* Prix vente - Triable */}
+          <button 
+            className="w-20 flex items-center justify-center gap-1 hover:text-gray-800 transition-colors"
+            onClick={() => handleSort('selling_price_htva')}
+          >
             <ArrowUpFromLine className="h-3 w-3" />
             <span>Vente</span>
-          </div>
+            {getSortIcon('selling_price_htva')}
+          </button>
           
-          {/* Prix achat */}
-          <div className="w-20 flex items-center justify-center gap-1">
+          {/* Prix achat - Triable */}
+          <button 
+            className="w-20 flex items-center justify-center gap-1 hover:text-gray-800 transition-colors"
+            onClick={() => handleSort('purchase_price_htva')}
+          >
             <ArrowDownToLine className="h-3 w-3" />
             <span>Achat</span>
-          </div>
+            {getSortIcon('purchase_price_htva')}
+          </button>
           
           {/* Actions */}
           <div className="w-8"></div>
@@ -135,6 +230,18 @@ export default function CompactProductList({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modale de filtres */}
+      {showFilterModal && (
+        <FilterModal
+          isOpen={showFilterModal}
+          onClose={() => setShowFilterModal(false)}
+          filterConfig={filterConfig}
+          onApplyFilters={applyFilters}
+          onResetFilters={resetFilters}
+          products={products}
+        />
       )}
     </div>
   );
