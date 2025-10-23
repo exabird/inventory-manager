@@ -18,7 +18,7 @@ export default function Home() {
   const [showInspector, setShowInspector] = useState(false);
 
   // Fonction pour charger les produits depuis Supabase
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     try {
       setIsLoading(true);
       console.log('🔄 Chargement des produits depuis Supabase...');
@@ -52,12 +52,12 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   // Charger les produits au montage du composant
   useEffect(() => {
     loadProducts();
-  }, []);
+  }, [loadProducts]);
 
   // Fonction pour gérer la sélection de produit
   const handleSelectProduct = useCallback((product: Product) => {
@@ -76,7 +76,9 @@ export default function Home() {
     if (!selectedProduct) return;
     
     try {
-      console.log('💾 Sauvegarde des modifications du produit:', data.name);
+      console.log('💾 [page.tsx] Début handleUpdateProduct');
+      console.log('💾 [page.tsx] Données reçues:', data);
+      console.log('💾 [page.tsx] selectedProduct.id:', selectedProduct.id);
       
       // Mettre à jour le produit dans Supabase
       const updatedProduct = await ProductService.update(selectedProduct.id, data);
@@ -93,9 +95,9 @@ export default function Home() {
         console.error('❌ Erreur lors de la mise à jour du produit');
       }
     } catch (error) {
-      console.error('❌ Erreur lors de la sauvegarde:', error);
+      console.error('❌ [page.tsx] Erreur lors de la sauvegarde:', error);
     }
-  }, [selectedProduct]);
+  }, [selectedProduct, loadProducts, handleCloseInspector]);
 
   // Fonction pour supprimer un produit
   const handleDeleteProduct = useCallback(async (id: string) => {
