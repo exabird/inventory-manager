@@ -175,7 +175,7 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       console.log('📱 [BarcodeScanner] iPhone détecté:', isIPhone);
 
       const config = {
-        fps: 30,  // 30 FPS pour balance performance/qualité
+        fps: 10,  // FPS RÉDUIT = plus de temps pour décoder chaque frame
         qrbox: function(viewfinderWidth: number, viewfinderHeight: number) {
           // Zone MAXIMALE (98%x70%) pour scan à distance optimale
           const width = Math.floor(viewfinderWidth * 0.98);
@@ -183,7 +183,7 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
           console.log('📐 [BarcodeScanner] Zone de scan:', width, 'x', height);
           return { width, height };
         },
-        disableFlip: false,
+        disableFlip: true,  // Désactiver flip pour gain de perf
         // Configuration vidéo optimisée - contraintes souples pour compatibilité
         videoConstraints: {
           facingMode: 'environment',
@@ -589,45 +589,55 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
 
         {/* Boutons de contrôle dans la vue de scan */}
         {isScanning && (
-          <div className="absolute top-20 right-4 flex flex-col gap-2">
-            {/* Bouton Flash */}
-            {flashSupported && (
+          <>
+            <div className="absolute top-20 right-4 flex flex-col gap-2">
+              {/* Bouton Flash */}
+              {flashSupported && (
+                <Button
+                  onClick={toggleFlash}
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "bg-white/90 hover:bg-white border-white/20",
+                    flashEnabled ? "text-yellow-500 font-bold" : "text-black"
+                  )}
+                >
+                  {flashEnabled ? '⚡ Flash ON' : '💡 Flash OFF'}
+                </Button>
+              )}
+              
               <Button
-                onClick={toggleFlash}
+                onClick={() => {
+                  stopScanning();
+                  setShowCameraSelection(true);
+                }}
                 variant="outline"
                 size="sm"
-                className={cn(
-                  "bg-white/90 hover:bg-white border-white/20",
-                  flashEnabled ? "text-yellow-500 font-bold" : "text-black"
-                )}
+                className="bg-white/90 text-black hover:bg-white border-white/20"
               >
-                {flashEnabled ? '⚡ Flash ON' : '💡 Flash OFF'}
+                📷 Caméra
               </Button>
-            )}
-            
-            <Button
-              onClick={() => {
-                stopScanning();
-                setShowCameraSelection(true);
-              }}
-              variant="outline"
-              size="sm"
-              className="bg-white/90 text-black hover:bg-white border-white/20"
-            >
-              📷 Caméra
-            </Button>
-            <Button
-              onClick={() => {
-                stopScanning();
-                setShowManualInput(true);
-              }}
-              variant="outline"
-              size="sm"
-              className="bg-white/90 text-black hover:bg-white border-white/20"
-            >
-              📝 Manuel
-            </Button>
-          </div>
+              <Button
+                onClick={() => {
+                  stopScanning();
+                  setShowManualInput(true);
+                }}
+                variant="outline"
+                size="sm"
+                className="bg-white/90 text-black hover:bg-white border-white/20"
+              >
+                📝 Manuel
+              </Button>
+            </div>
+
+            {/* Indicateur de scan actif */}
+            <div className="absolute top-32 left-4">
+              <div className="bg-green-500/80 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2 animate-pulse">
+                <div className="w-3 h-3 bg-white rounded-full animate-ping"></div>
+                <span className="text-white font-semibold text-sm">Analyse en cours...</span>
+              </div>
+            </div>
+          </>
         )}
 
         {!isScanning && !error && !showCodeSelection && (
@@ -833,12 +843,12 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       {!isScanning && !error && (
         <div className="absolute bottom-8 left-0 right-0 px-6">
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-white text-sm">
-            <p className="font-semibold mb-2">💡 Conseils :</p>
+            <p className="font-semibold mb-2">💡 Pour scanner de loin :</p>
             <ul className="space-y-1 text-white/80">
-              <li>• Utilisez le bouton Flash pour scanner de plus loin</li>
-              <li>• Tenez votre appareil stable</li>
-              <li>• Le code peut être détecté à 20-30cm de distance</li>
-              <li>• Cadrez le code dans la grande zone de scan</li>
+              <li>⚡ <strong>Activez le FLASH</strong> (bouton en haut à droite)</li>
+              <li>📱 Tenez votre iPhone bien stable</li>
+              <li>🎯 Le code-barres doit remplir ~50% de la zone</li>
+              <li>⏱️ Laissez 2-3 secondes pour la détection</li>
             </ul>
           </div>
         </div>
