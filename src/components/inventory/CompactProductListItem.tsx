@@ -16,6 +16,10 @@ interface CompactProductListItemProps {
     quantity: boolean;
     selling_price_htva: boolean;
     purchase_price_htva: boolean;
+    brand: boolean;
+    warranty_period: boolean;
+    min_stock_quantity: boolean;
+    [key: string]: boolean;
   };
 }
 
@@ -27,12 +31,38 @@ export default function CompactProductListItem({
 }: CompactProductListItemProps) {
   const getStockStatus = () => {
     if (product.quantity === 0) {
-      return { label: 'Rupture', variant: 'destructive' as const };
+      return { 
+        label: 'Rupture', 
+        variant: 'destructive' as const,
+        color: 'text-red-600',
+        bgColor: 'bg-red-50',
+        iconColor: 'text-red-500'
+      };
     } else if (product.quantity < 5) {
-      return { label: 'Stock faible', variant: 'secondary' as const };
+      return { 
+        label: 'Stock faible', 
+        variant: 'secondary' as const,
+        color: 'text-orange-600',
+        bgColor: 'bg-orange-50',
+        iconColor: 'text-orange-500'
+      };
     } else {
-      return { label: 'En stock', variant: 'default' as const };
+      return { 
+        label: 'En stock', 
+        variant: 'default' as const,
+        color: 'text-green-600',
+        bgColor: 'bg-green-50',
+        iconColor: 'text-green-500'
+      };
     }
+  };
+
+  const getFieldValue = (fieldKey: string) => {
+    if (fieldKey.startsWith('metadata.')) {
+      const metadataKey = fieldKey.replace('metadata.', '');
+      return product.metadata?.[metadataKey] || '-';
+    }
+    return (product as any)[fieldKey] || '-';
   };
 
   const stockStatus = getStockStatus();
@@ -67,15 +97,12 @@ export default function CompactProductListItem({
               {product.name}
             </h3>
             <div className="flex items-center gap-2 mt-1">
-              <Badge 
-                variant={stockStatus.variant}
-                className="text-xs"
-              >
-                {stockStatus.label}
-              </Badge>
-              <span className="text-xs text-gray-500">
-                {product.quantity} unités
-              </span>
+              <div className={`flex items-center gap-1 px-2 py-1 rounded-md ${stockStatus.bgColor}`}>
+                <Package className={`h-3 w-3 ${stockStatus.iconColor}`} />
+                <span className={`text-xs font-semibold ${stockStatus.color}`}>
+                  {product.quantity}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -153,22 +180,24 @@ export default function CompactProductListItem({
           </div>
         )}
 
-        {/* Statut stock */}
-        <div className="flex-shrink-0 w-20">
-          <Badge 
-            variant={stockStatus.variant}
-            className="text-xs font-medium"
-          >
-            {stockStatus.label}
-          </Badge>
-        </div>
+        {/* Marque */}
+        {columnVisibility.brand && (
+          <div className="flex-shrink-0 w-24">
+            <div className="flex items-center gap-1">
+              <Building2 className="h-3 w-3 text-gray-400" />
+              <span className="text-xs text-gray-500 truncate">
+                {product.brand || '-'}
+              </span>
+            </div>
+          </div>
+        )}
 
-        {/* Stock */}
+        {/* Stock - Version améliorée avec icône et couleur */}
         {columnVisibility.quantity && (
           <div className="flex-shrink-0 w-16 text-center">
-            <div className="flex items-center justify-center gap-1">
-              <Package className="h-3 w-3 text-gray-400" />
-              <span className="text-sm font-medium text-gray-900">
+            <div className={`flex items-center justify-center gap-1 px-2 py-1 rounded-md ${stockStatus.bgColor}`}>
+              <Package className={`h-3 w-3 ${stockStatus.iconColor}`} />
+              <span className={`text-sm font-semibold ${stockStatus.color}`}>
                 {product.quantity}
               </span>
             </div>
@@ -206,6 +235,18 @@ export default function CompactProductListItem({
             )}
           </div>
         )}
+
+        {/* Colonnes dynamiques */}
+        {Object.keys(columnVisibility)
+          .filter(key => !['manufacturer_ref', 'category', 'quantity', 'selling_price_htva', 'purchase_price_htva'].includes(key))
+          .filter(key => columnVisibility[key])
+          .map(fieldKey => (
+            <div key={fieldKey} className="flex-shrink-0 w-20 text-center">
+              <span className="text-xs text-gray-500 truncate">
+                {getFieldValue(fieldKey)}
+              </span>
+            </div>
+          ))}
 
         {/* Bouton modification stock */}
         <div className="flex-shrink-0">

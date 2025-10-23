@@ -1,19 +1,28 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Search, Package, Tag, DollarSign, Calendar, Building2, RotateCcw } from 'lucide-react';
+import { X, Search, Package, Tag, DollarSign, Calendar, Building2, RotateCcw, Settings, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Product } from '@/lib/supabase';
 
-type FilterCategory = 'statut' | 'categorie' | 'prix' | 'marque' | 'date' | 'stock';
+type FilterCategory = 'statut' | 'categorie' | 'prix' | 'marque' | 'date' | 'stock' | 'colonnes';
 type StockStatus = 'in-stock' | 'low-stock' | 'out-of-stock';
 
 interface FilterConfig {
   categories: string[];
   stockStatus: StockStatus[];
   priceRange: { min: number | null; max: number | null };
+}
+
+interface ColumnVisibility {
+  manufacturer_ref: boolean;
+  category: boolean;
+  quantity: boolean;
+  selling_price_htva: boolean;
+  purchase_price_htva: boolean;
+  [key: string]: boolean; // Pour les métadonnées dynamiques
 }
 
 interface FilterModalProps {
@@ -23,6 +32,8 @@ interface FilterModalProps {
   onApplyFilters: (config: FilterConfig) => void;
   onResetFilters: () => void;
   products: (Product & { categories?: { name: string } })[];
+  columnVisibility: ColumnVisibility;
+  onColumnVisibilityChange: (visibility: ColumnVisibility) => void;
 }
 
 const filterCategories = [
@@ -32,6 +43,7 @@ const filterCategories = [
   { id: 'marque', label: 'Marque', icon: Building2 },
   { id: 'date', label: 'Date', icon: Calendar },
   { id: 'stock', label: 'Stock', icon: Package },
+  { id: 'colonnes', label: 'Colonnes', icon: Settings },
 ];
 
 const stockStatusOptions = [
@@ -46,12 +58,15 @@ export default function FilterModal({
   filterConfig,
   onApplyFilters,
   onResetFilters,
-  products
+  products,
+  columnVisibility,
+  onColumnVisibilityChange
 }: FilterModalProps) {
   const [activeCategory, setActiveCategory] = useState<FilterCategory>('statut');
   const [localConfig, setLocalConfig] = useState<FilterConfig>(filterConfig);
   const [searchQuery, setSearchQuery] = useState('');
   const [priceTimeout, setPriceTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [customFieldName, setCustomFieldName] = useState('');
 
   // Appliquer les filtres en temps réel avec délai pour les prix
   useEffect(() => {
@@ -110,6 +125,55 @@ export default function FilterModal({
         ? prev.categories.filter(c => c !== brandCategory)
         : [...prev.categories, brandCategory]
     }));
+  };
+
+  const handleColumnToggle = (columnKey: string) => {
+    onColumnVisibilityChange({
+      ...columnVisibility,
+      [columnKey]: !columnVisibility[columnKey]
+    });
+  };
+
+  const handleAddCustomColumn = (fieldName: string) => {
+    if (fieldName && !columnVisibility[fieldName]) {
+      onColumnVisibilityChange({
+        ...columnVisibility,
+        [fieldName]: true
+      });
+    }
+  };
+
+  // Extraire toutes les métadonnées disponibles des produits
+  const getAllMetadataFields = () => {
+    const allFields = new Set<string>();
+    const metadataFields = new Set<string>();
+    
+    products.forEach(product => {
+      // Champs de base (exclure les champs déjà gérés)
+      const excludedFields = ['id', 'created_at', 'updated_at', 'manufacturer_ref', 'category', 'quantity', 'selling_price_htva', 'purchase_price_htva'];
+      Object.keys(product).forEach(key => {
+        if (!excludedFields.includes(key)) {
+          allFields.add(key);
+        }
+      });
+      
+      // Métadonnées dans l'objet metadata
+      if (product.metadata && typeof product.metadata === 'object') {
+        Object.keys(product.metadata).forEach(key => {
+          metadataFields.add(`metadata.${key}`);
+        });
+      }
+    });
+    
+    // Organiser les champs par catégorie
+    const baseFields = Array.from(allFields).sort();
+    const metaFields = Array.from(metadataFields).sort();
+    
+    return {
+      base: baseFields,
+      metadata: metaFields,
+      all: [...baseFields, ...metaFields].sort()
+    };
   };
 
   const handleReset = () => {
@@ -289,6 +353,146 @@ export default function FilterModal({
           </div>
         );
 
+      case 'colonnes':
+        const fieldData = getAllMetadataFields();
+        
+        return (
+          <div className="space-y-4">
+            <div className="text-xs text-gray-600">
+              Configurer l'affichage des colonnes
+            </div>
+            
+            {/* Colonnes principales */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-medium text-gray-700 flex items-center gap-2">
+                <Settings className="h-3 w-3" />
+                Colonnes principales
+              </h4>
+              {[
+                { key: 'manufacturer_ref', label: 'Référence fabricant', icon: Hash },
+                { key: 'category', label: 'Catégorie', icon: Tag },
+                { key: 'quantity', label: 'Stock', icon: Package },
+                { key: 'selling_price_htva', label: 'Prix de vente', icon: DollarSign },
+                { key: 'purchase_price_htva', label: 'Prix d\'achat', icon: DollarSign }
+              ].map(column => (
+                <div key={column.key} className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-50">
+                  <Checkbox
+                    id={column.key}
+                    checked={columnVisibility[column.key] || false}
+                    onCheckedChange={() => handleColumnToggle(column.key)}
+                    className="h-4 w-4"
+                  />
+                  <column.icon className="h-3 w-3 text-gray-400" />
+                  <label 
+                    htmlFor={column.key}
+                    className="text-xs font-medium text-gray-900 cursor-pointer flex-1"
+                  >
+                    {column.label}
+                  </label>
+                </div>
+              ))}
+            </div>
+
+            {/* Champs de base supplémentaires */}
+            {fieldData.base.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-medium text-gray-700 flex items-center gap-2">
+                  <Building2 className="h-3 w-3" />
+                  Champs de base
+                </h4>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                  <Input
+                    placeholder="Rechercher un champ..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8 h-8 text-xs"
+                  />
+                </div>
+                
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {fieldData.base
+                    .filter(field => 
+                      field.toLowerCase().includes(searchQuery.toLowerCase())
+                    )
+                    .map(field => (
+                      <div key={field} className="flex items-center space-x-2 p-1 rounded hover:bg-gray-50">
+                        <Checkbox
+                          id={field}
+                          checked={columnVisibility[field] || false}
+                          onCheckedChange={() => handleColumnToggle(field)}
+                          className="h-4 w-4"
+                        />
+                        <label 
+                          htmlFor={field}
+                          className="text-xs font-medium text-gray-900 cursor-pointer flex-1"
+                        >
+                          {field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </label>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Métadonnées personnalisées */}
+            {fieldData.metadata.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-medium text-gray-700 flex items-center gap-2">
+                  <Package className="h-3 w-3" />
+                  Métadonnées personnalisées
+                </h4>
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {fieldData.metadata
+                    .filter(field => 
+                      field.toLowerCase().includes(searchQuery.toLowerCase())
+                    )
+                    .map(field => (
+                      <div key={field} className="flex items-center space-x-2 p-1 rounded hover:bg-gray-50">
+                        <Checkbox
+                          id={field}
+                          checked={columnVisibility[field] || false}
+                          onCheckedChange={() => handleColumnToggle(field)}
+                          className="h-4 w-4"
+                        />
+                        <label 
+                          htmlFor={field}
+                          className="text-xs font-medium text-gray-900 cursor-pointer flex-1"
+                        >
+                          {field.replace('metadata.', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </label>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Ajouter une colonne personnalisée */}
+            <div className="space-y-2 border-t pt-3">
+              <h4 className="text-xs font-medium text-gray-700">Ajouter une colonne</h4>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Nom du champ..."
+                  value={customFieldName}
+                  onChange={(e) => setCustomFieldName(e.target.value)}
+                  className="h-8 text-xs flex-1"
+                />
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    handleAddCustomColumn(customFieldName);
+                    setCustomFieldName('');
+                  }}
+                  disabled={!customFieldName}
+                  className="h-8 px-2 text-xs"
+                >
+                  Ajouter
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+
       default:
         return (
           <div className="text-center py-4 text-gray-500">
@@ -303,7 +507,7 @@ export default function FilterModal({
       <div className="relative bg-white rounded-lg shadow-lg w-96 max-h-[80vh] flex flex-col border border-gray-200">
         {/* Header */}
         <div className="flex items-center justify-between p-3 border-b">
-          <h2 className="text-lg font-semibold">Filtres</h2>
+          <h2 className="text-lg font-semibold">Filtres & Colonnes</h2>
           <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
             <X className="h-4 w-4" />
           </Button>

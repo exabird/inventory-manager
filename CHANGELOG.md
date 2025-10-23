@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.1.17] - 2024-12-19
+
+### ✨ Améliorations majeures de la liste des produits
+
+#### 🎨 Colonne Stock améliorée
+- **Icône + valeur colorée** : Affichage compact avec icône Package et couleur selon la disponibilité
+- **Couleurs intelligentes** :
+  - 🟢 Vert : Stock normal (≥5 unités)
+  - 🟠 Orange : Stock faible (1-4 unités) 
+  - 🔴 Rouge : Rupture de stock (0 unité)
+- **Design cohérent** : Même amélioration sur mobile et desktop
+
+#### 🔍 Recherche améliorée
+- **Recherche étendue** : Recherche dans tous les champs pertinents (nom, référence, marque, description, métadonnées)
+- **Recherche intelligente** : Inclut les métadonnées personnalisées et les champs cachés
+- **Performance optimisée** : Filtrage en temps réel sans latence
+
+#### 📊 Gestion des colonnes optimisée
+- **Nouvelles colonnes** : Marque, Garantie, Stock minimum
+- **Interface améliorée** : Modale des filtres réorganisée avec icônes et catégories
+- **Colonnes par défaut** : Configuration intelligente (marque visible, prix achat masqué)
+- **Métadonnées dynamiques** : Ajout facile de colonnes personnalisées
+
+#### 🎯 Filtres et tri améliorés
+- **Modale réorganisée** : Sections claires avec icônes (Colonnes principales, Champs de base, Métadonnées)
+- **Recherche dans les colonnes** : Filtrage rapide des champs disponibles
+- **Tri étendu** : Support des nouvelles colonnes
+- **Interface intuitive** : Hover effects et feedback visuel améliorés
+
+#### 📱 Responsive design
+- **Mobile optimisé** : Affichage cohérent des améliorations sur mobile
+- **Desktop perfectionné** : Tableau plus informatif et visuellement attrayant
+- **Performance** : Chargement rapide et interactions fluides
+
+### 🐛 Corrections
+- Correction de l'affichage des colonnes dynamiques
+- Amélioration de la gestion des états de chargement
+- Optimisation des performances de filtrage
+
+### 🔧 Améliorations techniques
+- Code plus maintenable avec interfaces TypeScript étendues
+- Gestion d'erreur améliorée avec fallback vers données simulées
+- Architecture modulaire pour les composants de colonnes
+
+---
+
 ## [0.1.16] - 2025-01-22
 
 ### 🎛️ Améliorations Tableau Produits
