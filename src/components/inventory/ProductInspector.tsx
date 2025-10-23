@@ -523,12 +523,19 @@ export default function ProductInspector({
     }
   };
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleFormSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
+    
+    console.log('💾 [ProductInspector] Début sauvegarde produit');
     
     if (!validateForm()) {
+      console.error('❌ [ProductInspector] Validation échouée');
       return;
     }
+    
+    console.log('✅ [ProductInspector] Validation OK');
     
     const cleanedData = {
       ...formData,
@@ -570,9 +577,11 @@ export default function ProductInspector({
     };
     
     try {
+      console.log('📤 [ProductInspector] Envoi des données:', cleanedData);
       await onSubmit(cleanedData);
+      console.log('✅ [ProductInspector] Produit sauvegardé avec succès');
     } catch (error) {
-      console.warn('⚠️ Erreur lors de la soumission:', error);
+      console.error('❌ [ProductInspector] Erreur lors de la soumission:', error);
     }
   };
 
