@@ -406,6 +406,26 @@ export default function ProductInspector({
       console.log('🤖 [Fonction 2] Début remplissage IA');
       setIsAILoading(true);
       
+      // Récupérer la clé API et le modèle depuis les paramètres sauvegardés
+      const savedSettings = localStorage.getItem('ai_settings');
+      let apiKey = null;
+      let model = 'claude-sonnet-4-20250514'; // Par défaut
+      
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        apiKey = settings.claudeApiKey;
+        model = settings.model || model;
+      }
+      
+      if (!apiKey) {
+        alert('⚠️ Clé API Claude non configurée.\n\nAllez dans Paramètres → API Claude pour configurer votre clé API Anthropic.');
+        setIsAILoading(false);
+        return;
+      }
+      
+      console.log('🔑 [Fonction 2] Clé API récupérée depuis les paramètres');
+      console.log('🤖 [Fonction 2] Modèle sélectionné:', model);
+      
       // Appeler l'API Claude
       const response = await fetch('/api/ai-fill', {
         method: 'POST',
@@ -413,7 +433,9 @@ export default function ProductInspector({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          productData: formData
+          productData: formData,
+          apiKey: apiKey,
+          model: model
         })
       });
       

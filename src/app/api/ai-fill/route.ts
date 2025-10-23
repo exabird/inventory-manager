@@ -31,20 +31,21 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🤖 [Fonction 2] Début remplissage IA');
     
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    // Récupérer les données actuelles du produit, la clé API ET le modèle
+    const body = await request.json();
+    const currentData: ProductData = body.productData;
+    const apiKey = body.apiKey || process.env.ANTHROPIC_API_KEY;
+    const model = body.model || 'claude-sonnet-4-20250514'; // Claude 4.5 par défaut
     
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'Clé API Anthropic non configurée' },
+        { error: 'Clé API Anthropic non configurée. Allez dans Paramètres pour la configurer.' },
         { status: 500 }
       );
     }
     
-    // Récupérer les données actuelles du produit
-    const body = await request.json();
-    const currentData: ProductData = body.productData;
-    
     console.log('📦 [Fonction 2] Données actuelles:', currentData);
+    console.log('🤖 [Fonction 2] Modèle utilisé:', model);
     
     // Initialiser le client Anthropic
     const anthropic = new Anthropic({
@@ -101,7 +102,7 @@ RÉPONDS UNIQUEMENT avec le JSON, AUCUN texte avant ou après.`;
     
     // Appel à Claude
     const message = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: model,
       max_tokens: 2000,
       messages: [
         {

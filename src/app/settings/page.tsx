@@ -13,14 +13,14 @@ import { APP_VERSION, APP_NAME } from '@/lib/version';
 
 export default function SettingsPage() {
   const [claudeApiKey, setClaudeApiKey] = useState('');
-  const [selectedModel, setSelectedModel] = useState('claude-3-5-sonnet-20241022');
+  const [selectedModel, setSelectedModel] = useState('claude-sonnet-4-20250514');
   const [minConfidence, setMinConfidence] = useState(75);
   const [customPrompt, setCustomPrompt] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
   // Prompt par défaut
-  function getDefaultPrompt() {
+  const getDefaultPrompt = () => {
     return `Tu es un expert en analyse de données produit. Ta mission est de rechercher et extraire des informations produit depuis les sites des fabricants.
 
 Processus de recherche:
@@ -45,7 +45,27 @@ Règles importantes:
 - Indique la source exacte de chaque information
 - Donne un score de confiance (0-100) pour chaque champ
 - Ne remplis que les champs pour lesquels tu as une source fiable`;
-  }
+  };
+
+  // Charger les paramètres sauvegardés au démarrage
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('ai_settings');
+    if (savedSettings) {
+      try {
+        const settings = JSON.parse(savedSettings);
+        if (settings.claudeApiKey) setClaudeApiKey(settings.claudeApiKey);
+        if (settings.model) setSelectedModel(settings.model);
+        if (settings.minConfidence) setMinConfidence(settings.minConfidence);
+        if (settings.customPrompt) setCustomPrompt(settings.customPrompt);
+        console.log('✅ Paramètres IA chargés depuis localStorage');
+      } catch (error) {
+        console.error('❌ Erreur lors du chargement des paramètres:', error);
+      }
+    } else {
+      // Initialiser avec le prompt par défaut si aucune sauvegarde
+      setCustomPrompt(getDefaultPrompt());
+    }
+  }, []);
 
   // Sauvegarder les paramètres
   const handleSave = () => {
@@ -124,8 +144,11 @@ Règles importantes:
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="claude-sonnet-4-20250514">
+                    Claude Sonnet 4.5 (Dernier modèle) ⚡
+                  </SelectItem>
                   <SelectItem value="claude-3-5-sonnet-20241022">
-                    Claude 3.5 Sonnet (Recommandé)
+                    Claude 3.5 Sonnet
                   </SelectItem>
                   <SelectItem value="claude-3-haiku-20240307">
                     Claude 3 Haiku (Rapide)
@@ -136,7 +159,7 @@ Règles importantes:
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Sonnet offre le meilleur rapport qualité/prix pour le scraping
+                Claude 4.5 Sonnet est le plus performant pour l'analyse produit
               </p>
             </div>
           </CardContent>
