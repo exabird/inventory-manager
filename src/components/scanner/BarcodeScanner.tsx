@@ -1,5 +1,19 @@
 'use client';
 
+/**
+ * 🔍 Scanner v1.0
+ * 
+ * Composant de scan de codes-barres avec:
+ * - Zone rectangulaire visible (280x180px)
+ * - Flash automatique
+ * - Bip sonore de confirmation
+ * - FPS optimisé (10 FPS)
+ * - Résolution 4K
+ * - Support iPhone ultra grand-angle
+ * 
+ * @see FEATURES_VERSIONS.md pour l'historique complet
+ */
+
 import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { Camera, X, Loader2 } from 'lucide-react';

@@ -2,20 +2,21 @@
 
 Application web mobile-first pour la gestion intelligente de votre stock de marchandises avec scan de codes-barres et QR codes.
 
-![Version](https://img.shields.io/badge/version-0.0.22-blue)
+![Version](https://img.shields.io/badge/version-0.1.27-blue)
 ![Next.js](https://img.shields.io/badge/Next.js-16.0.0-black)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## 🚀 Déploiement
 
 - **Production** : https://stock.exabird.be/
-- **Version actuelle** : 0.0.22
+- **Version actuelle** : 0.1.27
 
 ## 📚 Documentation
 
 ### Pour les développeurs
 - **[Processus de développement](docs/DEVELOPMENT_PROCESSES.md)** - Règles et processus obligatoires
 - **[Documentation complète](docs/APPLICATION_DOCUMENTATION.md)** - Architecture, configuration, utilisation
+- **[Versions des features](FEATURES_VERSIONS.md)** - 🆕 Versioning par fonctionnalité
 
 ### Pour les utilisateurs
 - **[Guide d'utilisation](docs/APPLICATION_DOCUMENTATION.md#utilisation)** - Comment utiliser l'application
