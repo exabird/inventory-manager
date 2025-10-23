@@ -10,12 +10,20 @@ interface CompactProductListItemProps {
   product: Product & { categories?: { name: string } };
   onSelect: (product: Product) => void;
   onStockEdit: (product: Product) => void;
+  columnVisibility: {
+    manufacturer_ref: boolean;
+    category: boolean;
+    quantity: boolean;
+    selling_price_htva: boolean;
+    purchase_price_htva: boolean;
+  };
 }
 
 export default function CompactProductListItem({ 
   product, 
   onSelect, 
-  onStockEdit 
+  onStockEdit,
+  columnVisibility
 }: CompactProductListItemProps) {
   const getStockStatus = () => {
     if (product.quantity === 0) {
@@ -122,24 +130,28 @@ export default function CompactProductListItem({
         </div>
 
         {/* Référence fabricant */}
-        <div className="flex-shrink-0 w-24">
-          <div className="flex items-center gap-1">
-            <Hash className="h-3 w-3 text-gray-400" />
-            <span className="text-xs text-gray-500 truncate">
-              {product.manufacturer_ref || '-'}
-            </span>
+        {columnVisibility.manufacturer_ref && (
+          <div className="flex-shrink-0 w-24">
+            <div className="flex items-center gap-1">
+              <Hash className="h-3 w-3 text-gray-400" />
+              <span className="text-xs text-gray-500 truncate">
+                {product.manufacturer_ref || '-'}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Catégorie */}
-        <div className="flex-shrink-0 w-32">
-          <div className="flex items-center gap-1">
-            <Tag className="h-3 w-3 text-gray-400" />
-            <span className="text-xs text-gray-500 truncate">
-              {product.categories?.name || '-'}
-            </span>
+        {columnVisibility.category && (
+          <div className="flex-shrink-0 w-32">
+            <div className="flex items-center gap-1">
+              <Tag className="h-3 w-3 text-gray-400" />
+              <span className="text-xs text-gray-500 truncate">
+                {product.categories?.name || '-'}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Statut stock */}
         <div className="flex-shrink-0 w-20">
@@ -152,42 +164,48 @@ export default function CompactProductListItem({
         </div>
 
         {/* Stock */}
-        <div className="flex-shrink-0 w-16 text-center">
-          <div className="flex items-center justify-center gap-1">
-            <Package className="h-3 w-3 text-gray-400" />
-            <span className="text-sm font-medium text-gray-900">
-              {product.quantity}
-            </span>
+        {columnVisibility.quantity && (
+          <div className="flex-shrink-0 w-16 text-center">
+            <div className="flex items-center justify-center gap-1">
+              <Package className="h-3 w-3 text-gray-400" />
+              <span className="text-sm font-medium text-gray-900">
+                {product.quantity}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Prix de vente */}
-        <div className="flex-shrink-0 w-20 text-center">
-          {product.selling_price_htva ? (
-            <div className="flex items-center justify-center gap-1">
-              <ArrowUpFromLine className="h-3 w-3 text-gray-400" />
-              <span className="text-xs text-gray-500">
-                {product.selling_price_htva.toFixed(2)}€
-              </span>
-            </div>
-          ) : (
-            <span className="text-xs text-gray-400">-</span>
-          )}
-        </div>
+        {columnVisibility.selling_price_htva && (
+          <div className="flex-shrink-0 w-20 text-center">
+            {product.selling_price_htva ? (
+              <div className="flex items-center justify-center gap-1">
+                <ArrowUpFromLine className="h-3 w-3 text-gray-400" />
+                <span className="text-xs text-gray-500">
+                  {product.selling_price_htva.toFixed(2)}€
+                </span>
+              </div>
+            ) : (
+              <span className="text-xs text-gray-400">-</span>
+            )}
+          </div>
+        )}
 
         {/* Prix d'achat */}
-        <div className="flex-shrink-0 w-20 text-center">
-          {product.purchase_price_htva ? (
-            <div className="flex items-center justify-center gap-1">
-              <ArrowDownToLine className="h-3 w-3 text-gray-400" />
-              <span className="text-xs text-gray-500">
-                {product.purchase_price_htva.toFixed(2)}€
-              </span>
-            </div>
-          ) : (
-            <span className="text-xs text-gray-400">-</span>
-          )}
-        </div>
+        {columnVisibility.purchase_price_htva && (
+          <div className="flex-shrink-0 w-20 text-center">
+            {product.purchase_price_htva ? (
+              <div className="flex items-center justify-center gap-1">
+                <ArrowDownToLine className="h-3 w-3 text-gray-400" />
+                <span className="text-xs text-gray-500">
+                  {product.purchase_price_htva.toFixed(2)}€
+                </span>
+              </div>
+            ) : (
+              <span className="text-xs text-gray-400">-</span>
+            )}
+          </div>
+        )}
 
         {/* Bouton modification stock */}
         <div className="flex-shrink-0">

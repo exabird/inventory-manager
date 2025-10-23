@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Filter, Package, Hash, Tag, ArrowUpFromLine, ArrowDownToLine, Edit3, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Search, Filter, Package, Hash, Tag, ArrowUpFromLine, ArrowDownToLine, Edit3, ChevronUp, ChevronDown, ChevronsUpDown, Eye, EyeOff, Settings } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import CompactProductListItem from '@/components/inventory/CompactProductListItem';
 import FilterModal from '@/components/inventory/FilterModal';
 import { Product } from '@/lib/supabase';
@@ -20,6 +21,14 @@ interface FilterConfig {
   categories: string[];
   stockStatus: ('in-stock' | 'low-stock' | 'out-of-stock')[];
   priceRange: { min: number | null; max: number | null };
+}
+
+interface ColumnVisibility {
+  manufacturer_ref: boolean;
+  category: boolean;
+  quantity: boolean;
+  selling_price_htva: boolean;
+  purchase_price_htva: boolean;
 }
 
 interface CompactProductListProps {
@@ -44,6 +53,14 @@ export default function CompactProductList({
     priceRange: { min: null, max: null }
   });
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showColumnModal, setShowColumnModal] = useState(false);
+  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>({
+    manufacturer_ref: true,
+    category: true,
+    quantity: true,
+    selling_price_htva: true,
+    purchase_price_htva: false
+  });
 
   const handleSort = (field: SortField) => {
     let newDirection: SortDirection = 'asc';
@@ -82,6 +99,13 @@ export default function CompactProductList({
       stockStatus: [],
       priceRange: { min: null, max: null }
     });
+  };
+
+  const toggleColumnVisibility = (column: keyof ColumnVisibility) => {
+    setColumnVisibility(prev => ({
+      ...prev,
+      [column]: !prev[column]
+    }));
   };
 
   const sortProducts = (productsToSort: (Product & { categories?: { name: string } })[]) => {
@@ -175,7 +199,7 @@ export default function CompactProductList({
 
   return (
     <>
-      {/* Header avec recherche et filtre */}
+      {/* Header avec recherche et filtres */}
       <div className="p-3 bg-white border-b border-gray-200">
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
@@ -194,8 +218,19 @@ export default function CompactProductList({
             size="sm"
             className="h-8 px-2"
             onClick={() => setShowFilterModal(true)}
+            title="Filtres"
           >
             <Filter className="h-4 w-4" />
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-2"
+            onClick={() => setShowColumnModal(true)}
+            title="Colonnes"
+          >
+            <Settings className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -212,36 +247,53 @@ export default function CompactProductList({
             <span>Produit</span>
             {getSortIcon('name')}
           </button>
-          <button 
-            className="w-24 flex items-center gap-1 hover:text-gray-800 transition-colors"
-            onClick={() => handleSort('manufacturer_ref')}
-          >
-            <Hash className="h-3 w-3" />
-            <span>Réf.</span>
-            {getSortIcon('manufacturer_ref')}
-          </button>
-          <button 
-            className="w-32 flex items-center gap-1 hover:text-gray-800 transition-colors"
-            onClick={() => handleSort('category')}
-          >
-            <Tag className="h-3 w-3" />
-            <span>Catégorie</span>
-            {getSortIcon('category')}
-          </button>
-          <button 
-            className="w-20 flex items-center justify-end gap-1 hover:text-gray-800 transition-colors"
-            onClick={() => handleSort('quantity')}
-          >
-            <span>Stock</span>
-            {getSortIcon('quantity')}
-          </button>
-          <button 
-            className="w-20 flex items-center justify-end gap-1 hover:text-gray-800 transition-colors"
-            onClick={() => handleSort('selling_price_htva')}
-          >
-            <span>Prix</span>
-            {getSortIcon('selling_price_htva')}
-          </button>
+          {columnVisibility.manufacturer_ref && (
+            <button 
+              className="w-24 flex items-center gap-1 hover:text-gray-800 transition-colors"
+              onClick={() => handleSort('manufacturer_ref')}
+            >
+              <Hash className="h-3 w-3" />
+              <span>Réf.</span>
+              {getSortIcon('manufacturer_ref')}
+            </button>
+          )}
+          {columnVisibility.category && (
+            <button 
+              className="w-32 flex items-center gap-1 hover:text-gray-800 transition-colors"
+              onClick={() => handleSort('category')}
+            >
+              <Tag className="h-3 w-3" />
+              <span>Catégorie</span>
+              {getSortIcon('category')}
+            </button>
+          )}
+          {columnVisibility.quantity && (
+            <button 
+              className="w-20 flex items-center justify-end gap-1 hover:text-gray-800 transition-colors"
+              onClick={() => handleSort('quantity')}
+            >
+              <span>Stock</span>
+              {getSortIcon('quantity')}
+            </button>
+          )}
+          {columnVisibility.selling_price_htva && (
+            <button 
+              className="w-20 flex items-center justify-end gap-1 hover:text-gray-800 transition-colors"
+              onClick={() => handleSort('selling_price_htva')}
+            >
+              <span>Prix Vente</span>
+              {getSortIcon('selling_price_htva')}
+            </button>
+          )}
+          {columnVisibility.purchase_price_htva && (
+            <button 
+              className="w-20 flex items-center justify-end gap-1 hover:text-gray-800 transition-colors"
+              onClick={() => handleSort('purchase_price_htva')}
+            >
+              <span>Prix Achat</span>
+              {getSortIcon('purchase_price_htva')}
+            </button>
+          )}
           <div className="w-8"></div>
         </div>
       </div>
@@ -261,8 +313,42 @@ export default function CompactProductList({
                 product={product}
                 onSelect={onProductSelect}
                 onStockEdit={onStockEdit}
+                columnVisibility={columnVisibility}
               />
             ))}
+            
+            {/* Ligne de total */}
+            <div className="hidden md:flex items-center gap-3 py-3 px-4 border-t-2 border-gray-300 bg-gray-50 font-semibold text-gray-900">
+              <div className="w-4"></div>
+              <div className="w-12"></div>
+              <div className="flex-1">
+                <span className="text-sm">Total ({processedProducts.length} produits)</span>
+              </div>
+              {columnVisibility.manufacturer_ref && <div className="w-24"></div>}
+              {columnVisibility.category && <div className="w-32"></div>}
+              {columnVisibility.quantity && (
+                <div className="w-20 text-right">
+                  <span className="text-sm">
+                    {processedProducts.reduce((sum, p) => sum + (p.quantity || 0), 0)} unités
+                  </span>
+                </div>
+              )}
+              {columnVisibility.selling_price_htva && (
+                <div className="w-20 text-right">
+                  <span className="text-sm">
+                    {processedProducts.reduce((sum, p) => sum + (p.selling_price_htva || 0), 0).toFixed(2)}€
+                  </span>
+                </div>
+              )}
+              {columnVisibility.purchase_price_htva && (
+                <div className="w-20 text-right">
+                  <span className="text-sm">
+                    {processedProducts.reduce((sum, p) => sum + (p.purchase_price_htva || 0), 0).toFixed(2)}€
+                  </span>
+                </div>
+              )}
+              <div className="w-8"></div>
+            </div>
           </div>
         )}
       </div>
@@ -276,6 +362,87 @@ export default function CompactProductList({
         resetFilters={resetFilters}
         products={products}
       />
+      
+      {/* Modale de configuration des colonnes */}
+      {showColumnModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 max-w-[90vw]">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Configuration des colonnes</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowColumnModal(false)}
+              >
+                ✕
+              </Button>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="manufacturer_ref"
+                  checked={columnVisibility.manufacturer_ref}
+                  onCheckedChange={() => toggleColumnVisibility('manufacturer_ref')}
+                />
+                <label htmlFor="manufacturer_ref" className="text-sm font-medium">
+                  Référence fabricant
+                </label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="category"
+                  checked={columnVisibility.category}
+                  onCheckedChange={() => toggleColumnVisibility('category')}
+                />
+                <label htmlFor="category" className="text-sm font-medium">
+                  Catégorie
+                </label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="quantity"
+                  checked={columnVisibility.quantity}
+                  onCheckedChange={() => toggleColumnVisibility('quantity')}
+                />
+                <label htmlFor="quantity" className="text-sm font-medium">
+                  Stock
+                </label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="selling_price_htva"
+                  checked={columnVisibility.selling_price_htva}
+                  onCheckedChange={() => toggleColumnVisibility('selling_price_htva')}
+                />
+                <label htmlFor="selling_price_htva" className="text-sm font-medium">
+                  Prix de vente
+                </label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="purchase_price_htva"
+                  checked={columnVisibility.purchase_price_htva}
+                  onCheckedChange={() => toggleColumnVisibility('purchase_price_htva')}
+                />
+                <label htmlFor="purchase_price_htva" className="text-sm font-medium">
+                  Prix d'achat
+                </label>
+              </div>
+            </div>
+            
+            <div className="flex justify-end mt-6">
+              <Button onClick={() => setShowColumnModal(false)}>
+                Fermer
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

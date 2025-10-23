@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.1.16] - 2025-01-22
+
+### 🎛️ Améliorations Tableau Produits
+**Nouvelles fonctionnalités pour une meilleure gestion des données produit**
+
+#### Interface améliorée :
+- ✅ **Suppression du compteur "21 produits"** : Plus de texte redondant dans le header
+- ✅ **Ligne de total** : Affichage des totaux à la fin du tableau (quantité, prix)
+- ✅ **Configuration des colonnes** : Bouton Settings pour choisir les colonnes visibles
+- ✅ **Colonnes configurables** : Référence fabricant, Catégorie, Stock, Prix vente, Prix achat
+
+#### Fonctionnalités avancées :
+- ✅ **Visibilité dynamique** : Les colonnes s'adaptent selon la configuration
+- ✅ **Totaux calculés** : Somme automatique des quantités et prix
+- ✅ **Interface intuitive** : Modale de configuration avec checkboxes
+- ✅ **Persistance** : Les préférences de colonnes sont conservées
+
+#### Améliorations techniques :
+- ✅ **Composant modulaire** : `CompactProductListItem` avec props `columnVisibility`
+- ✅ **État local** : Gestion de la visibilité des colonnes dans `CompactProductList`
+- ✅ **Calculs optimisés** : Totaux calculés en temps réel
+- ✅ **UX cohérente** : Design uniforme avec le reste de l'application
+
 ## [0.1.15] - 2025-01-22
 
 ### 🎨 Refonte UI/UX : Page Produits Épurée
