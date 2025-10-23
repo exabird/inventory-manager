@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/layout/Sidebar";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Inventory Manager",
-  description: "Gestion intelligente de votre stock",
+  title: "Stocky - Gestion de stock intelligente",
+  description: "Gestion de stock intelligente avec IA",
 };
 
 export default function RootLayout({
@@ -24,19 +25,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr">
+    <html lang="fr" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <div className="flex min-h-screen">
-          {/* Sidebar */}
-          <Sidebar />
-          
-          {/* Main Content */}
-          <main className="flex-1 md:ml-64">
-            {children}
-          </main>
-        </div>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <div className="flex min-h-screen">
+            {/* Sidebar */}
+            <Sidebar />
+            
+            {/* Main Content */}
+            <main className="flex-1 md:ml-64">
+              {children}
+            </main>
+          </div>
+        </ThemeProvider>
       </body>
     </html>
   );

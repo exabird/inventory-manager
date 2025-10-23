@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { APP_VERSION } from '@/lib/version';
+import { ThemeToggle, ThemeToggleCompact } from '@/components/ui/theme-toggle';
 
 interface NavItem {
   id: string;
@@ -62,41 +63,41 @@ export default function Sidebar() {
       <aside className="hidden md:flex md:flex-col md:w-64 md:border-r md:bg-card md:fixed md:inset-y-0 md:left-0">
         {/* Header avec Logo */}
         <div className="p-6 border-b">
-          {/* Logo */}
-          <div className="mb-4 flex justify-center">
-            <div className="relative">
-              <svg 
-                width="64" 
-                height="64" 
-                viewBox="0 0 64 64" 
-                fill="none" 
-                xmlns="http://www.w3.org/2000/svg"
-                className="drop-shadow-lg"
-              >
-                {/* Fond du carton */}
-                <rect x="8" y="12" width="48" height="40" rx="4" fill="hsl(var(--primary))" opacity="0.9"/>
+          {/* Logo typographique moderne */}
+          <div className="mb-3 flex justify-center">
+            <div className="relative group">
+              {/* Logo principal avec typographie moderne */}
+              <div className="relative">
+                <h1 className="text-5xl font-black tracking-tight select-none">
+                  {/* "Stock" en foreground normal */}
+                  <span className="text-foreground transition-colors duration-300">
+                    Stock
+                  </span>
+                  {/* "y" avec accent primaire et badge AI */}
+                  <span className="relative inline-block">
+                    <span className="text-primary transition-colors duration-300">
+                      y
+                    </span>
+                    {/* Badge AI miniature au-dessus du y */}
+                    <span className="absolute -top-2 -right-3 text-[10px] font-bold bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full transition-all duration-300 group-hover:scale-110">
+                      AI
+                    </span>
+                  </span>
+                </h1>
                 
-                {/* Lignes de code-barres */}
-                <line x1="16" y1="24" x2="16" y2="36" stroke="white" strokeWidth="2"/>
-                <line x1="20" y1="24" x2="20" y2="36" stroke="white" strokeWidth="1"/>
-                <line x1="23" y1="24" x2="23" y2="36" stroke="white" strokeWidth="3"/>
-                <line x1="28" y1="24" x2="28" y2="36" stroke="white" strokeWidth="1"/>
-                <line x1="31" y1="24" x2="31" y2="36" stroke="white" strokeWidth="2"/>
-                <line x1="35" y1="24" x2="35" y2="36" stroke="white" strokeWidth="1"/>
-                <line x1="38" y1="24" x2="38" y2="36" stroke="white" strokeWidth="3"/>
-                <line x1="43" y1="24" x2="43" y2="36" stroke="white" strokeWidth="2"/>
-                <line x1="47" y1="24" x2="47" y2="36" stroke="white" strokeWidth="1"/>
-                
-                {/* Badge AI */}
-                <circle cx="50" cy="18" r="10" fill="hsl(var(--accent))" stroke="white" strokeWidth="2"/>
-                <text x="50" y="22" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">AI</text>
-              </svg>
+                {/* Ligne décorative sous le logo */}
+                <div className="mt-1 flex gap-1 justify-center">
+                  <div className="h-1 w-8 bg-primary rounded-full transition-all duration-300 group-hover:w-12"></div>
+                  <div className="h-1 w-3 bg-primary/50 rounded-full transition-all duration-300"></div>
+                </div>
+              </div>
             </div>
           </div>
           
-          {/* Titre */}
-          <h1 className="text-xl font-bold text-center">Inventory Manager</h1>
-          <p className="text-sm text-muted-foreground text-center">v{APP_VERSION}</p>
+          {/* Sous-titre */}
+          <p className="text-xs text-muted-foreground text-center">
+            Gestion de stock intelligente
+          </p>
         </div>
 
         {/* Navigation */}
@@ -119,12 +120,19 @@ export default function Sidebar() {
               </Button>
             );
           })}
+          
+          {/* Séparateur */}
+          <div className="pt-2 border-t" />
+          
+          {/* Toggle Dark Mode */}
+          <ThemeToggle />
         </nav>
 
         {/* Footer */}
         <div className="p-4 border-t">
-          <div className="text-xs text-muted-foreground">
-            <p>© 2025 Inventory Manager</p>
+          <div className="text-xs text-muted-foreground text-center space-y-1">
+            <p className="font-medium">Stocky v{APP_VERSION}</p>
+            <p className="text-[10px] opacity-70">made with ❤️ by nini</p>
           </div>
         </div>
       </aside>
@@ -154,6 +162,9 @@ export default function Sidebar() {
               </button>
             );
           })}
+          
+          {/* Toggle Dark Mode Mobile */}
+          <ThemeToggleCompact />
         </nav>
       </div>
 

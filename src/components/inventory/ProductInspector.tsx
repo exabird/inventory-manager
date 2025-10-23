@@ -27,7 +27,8 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   Hash as HashIcon,
-  Edit
+  Edit,
+  Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FunctionalInput, FunctionalTextarea, FunctionalSelect } from '@/components/ui/FunctionalFields';
@@ -36,6 +37,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { AIInputWrapper } from '@/components/ui/AIFieldIndicator';
 import { Product, Category } from '@/lib/supabase';
 import { CategoryService } from '@/lib/services';
 import Tabs, { TabContent } from '@/components/ui/Tabs';
@@ -164,6 +166,10 @@ export default function ProductInspector({
     },
   });
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  
+  // États pour le remplissage IA (Fonction 2)
+  const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
+  const [isAILoading, setIsAILoading] = useState(false);
 
   // Charger les catégories
   useEffect(() => {
@@ -390,6 +396,111 @@ export default function ProductInspector({
     return Object.keys(errors).length === 0;
   };
 
+  /**
+   * 🤖 FONCTION 2 : Remplissage IA Avancé
+   * Appelé manuellement via le bouton IA
+   * Utilise Claude pour rechercher et remplir les informations complètes
+   */
+  const handleAIFill = async () => {
+    try {
+      console.log('🤖 [Fonction 2] Début remplissage IA');
+      setIsAILoading(true);
+      
+      // Appeler l'API Claude
+      const response = await fetch('/api/ai-fill', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          productData: formData
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Erreur lors de l\'appel à l\'API IA');
+      }
+      
+      const result = await response.json();
+      console.log('✅ [Fonction 2] Données IA reçues:', result.data);
+      
+      // Marquer les champs qui seront remplis par l'IA
+      const filledFields = new Set<string>();
+      
+      // Mettre à jour formData avec les données IA
+      setFormData(prev => {
+        const aiData = result.data;
+        const updated: any = { ...prev };
+        
+        // Remplir les champs de base
+        if (aiData.name) {
+          updated.name = aiData.name;
+          filledFields.add('name');
+        }
+        if (aiData.brand) {
+          updated.brand = aiData.brand;
+          filledFields.add('brand');
+        }
+        if (aiData.manufacturer) {
+          updated.manufacturer = aiData.manufacturer;
+          filledFields.add('manufacturer');
+        }
+        if (aiData.manufacturer_ref) {
+          updated.manufacturer_ref = aiData.manufacturer_ref;
+          filledFields.add('manufacturer_ref');
+        }
+        if (aiData.short_description) {
+          updated.short_description = aiData.short_description;
+          filledFields.add('short_description');
+        }
+        if (aiData.long_description) {
+          updated.notes = aiData.long_description;
+          filledFields.add('notes');
+        }
+        if (aiData.selling_price_htva) {
+          updated.selling_price_htva = aiData.selling_price_htva;
+          filledFields.add('selling_price_htva');
+        }
+        if (aiData.warranty_period) {
+          updated.warranty_period = aiData.warranty_period;
+          filledFields.add('warranty_period');
+        }
+        if (aiData.category) {
+          // Chercher la catégorie correspondante
+          const matchingCategory = categories.find(
+            cat => cat.name.toLowerCase() === aiData.category.toLowerCase()
+          );
+          if (matchingCategory) {
+            updated.category_id = matchingCategory.id;
+            filledFields.add('category_id');
+          }
+        }
+        
+        // Ajouter les spécifications dans les métadonnées
+        if (aiData.specifications) {
+          updated.metadata = {
+            ...prev.metadata,
+            ...aiData.specifications
+          };
+        }
+        
+        return updated;
+      });
+      
+      // Sauvegarder les champs remplis par l'IA
+      setAiFilledFields(filledFields);
+      
+      console.log('🎉 [Fonction 2] Formulaire rempli par IA !');
+      console.log('🤖 Champs modifiés:', Array.from(filledFields));
+      
+    } catch (error: any) {
+      console.error('❌ [Fonction 2] Erreur:', error);
+      alert(`Erreur lors du remplissage IA: ${error.message}`);
+    } finally {
+      setIsAILoading(false);
+    }
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -512,36 +623,64 @@ export default function ProductInspector({
             <div className="space-y-6">
               {/* Informations de base */}
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide flex items-center gap-2">
-                  <Tag className="h-4 w-4" />
-                  Informations de base
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide flex items-center gap-2">
+                    <Tag className="h-4 w-4" />
+                    Informations de base
+                  </h3>
+                  
+                  {/* 🤖 Bouton IA (Fonction 2) */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAIFill}
+                    disabled={isAILoading}
+                    className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 hover:from-purple-600 hover:to-pink-600"
+                  >
+                    {isAILoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Analyse IA...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4" />
+                        <span>Remplir avec IA</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   {/* Nom du produit */}
                   <div className="col-span-2">
-                    <FunctionalInput
-                      id="name"
-                      label="Nom du produit *"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Ex: iPhone 15 Pro"
-                      status={getFieldStatus('name')}
-                      error={validationErrors.name}
-                    />
+                    <AIInputWrapper isAIGenerated={aiFilledFields.has('name')}>
+                      <FunctionalInput
+                        id="name"
+                        label="Nom du produit *"
+                        value={formData.name}
+                        onChange={(e) => handleInputChange('name', e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Ex: iPhone 15 Pro"
+                        status={getFieldStatus('name')}
+                        error={validationErrors.name}
+                      />
+                    </AIInputWrapper>
                   </div>
 
                   {/* Référence fabricant */}
-                  <FunctionalInput
-                    id="manufacturer_ref"
-                    label="Référence fabricant"
-                    value={formData.manufacturer_ref || ''}
-                    onChange={(e) => handleInputChange('manufacturer_ref', e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="REF-FAB-001"
-                    status={getFieldStatus('manufacturer_ref')}
-                  />
+                  <AIInputWrapper isAIGenerated={aiFilledFields.has('manufacturer_ref')}>
+                    <FunctionalInput
+                      id="manufacturer_ref"
+                      label="Référence fabricant"
+                      value={formData.manufacturer_ref || ''}
+                      onChange={(e) => handleInputChange('manufacturer_ref', e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="REF-FAB-001"
+                      status={getFieldStatus('manufacturer_ref')}
+                    />
+                  </AIInputWrapper>
 
                   {/* Référence interne */}
                   <FunctionalInput
@@ -584,20 +723,22 @@ export default function ProductInspector({
                   </div>
 
                   {/* Marque */}
-                  <div className="space-y-2">
-                    <Label htmlFor="brand" className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                      <Building2 className="h-4 w-4" />
-                      Marque
-                    </Label>
-                    <Input
-                      id="brand"
-                      value={formData.brand || ''}
-                      onChange={(e) => handleInputChange('brand', e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Apple, Samsung, etc."
-                      className="h-10"
-                    />
-                  </div>
+                  <AIInputWrapper isAIGenerated={aiFilledFields.has('brand')}>
+                    <div className="space-y-2">
+                      <Label htmlFor="brand" className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                        <Building2 className="h-4 w-4" />
+                        Marque
+                      </Label>
+                      <Input
+                        id="brand"
+                        value={formData.brand || ''}
+                        onChange={(e) => handleInputChange('brand', e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Apple, Samsung, etc."
+                        className="h-10"
+                      />
+                    </div>
+                  </AIInputWrapper>
 
                   {/* Catégorie */}
                   <div className="col-span-2 space-y-2">
@@ -628,37 +769,43 @@ export default function ProductInspector({
                   </div>
 
                   {/* Description courte */}
-                  <div className="col-span-2 space-y-2">
-                    <Label htmlFor="short_description" className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                      <FileText className="h-4 w-4" />
-                      Description courte
-                    </Label>
-                    <textarea
-                      id="short_description"
-                      value={formData.short_description || ''}
-                      onChange={(e) => handleInputChange('short_description', e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Description courte du produit..."
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                    />
+                  <div className="col-span-2">
+                    <AIInputWrapper isAIGenerated={aiFilledFields.has('short_description')}>
+                      <div className="space-y-2">
+                        <Label htmlFor="short_description" className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                          <FileText className="h-4 w-4" />
+                          Description courte
+                        </Label>
+                        <textarea
+                          id="short_description"
+                          value={formData.short_description || ''}
+                          onChange={(e) => handleInputChange('short_description', e.target.value)}
+                          onKeyDown={handleKeyDown}
+                          placeholder="Description courte du produit..."
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        />
+                      </div>
+                    </AIInputWrapper>
                   </div>
 
                   {/* Période de garantie */}
-                  <div className="space-y-2">
-                    <Label htmlFor="warranty_period" className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                      <Calendar className="h-4 w-4" />
-                      Période de garantie
-                    </Label>
-                    <Input
-                      id="warranty_period"
-                      value={formData.warranty_period || ''}
-                      onChange={(e) => handleInputChange('warranty_period', e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="2 ans, 24 mois, etc."
-                      className="h-10"
-                    />
-                  </div>
+                  <AIInputWrapper isAIGenerated={aiFilledFields.has('warranty_period')}>
+                    <div className="space-y-2">
+                      <Label htmlFor="warranty_period" className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                        <Calendar className="h-4 w-4" />
+                        Période de garantie
+                      </Label>
+                      <Input
+                        id="warranty_period"
+                        value={formData.warranty_period || ''}
+                        onChange={(e) => handleInputChange('warranty_period', e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="2 ans, 24 mois, etc."
+                        className="h-10"
+                      />
+                    </div>
+                  </AIInputWrapper>
                 </div>
               </div>
 
@@ -689,22 +836,24 @@ export default function ProductInspector({
                   </div>
 
                   {/* Prix de vente HTVA */}
-                  <div className="space-y-2">
-                    <Label htmlFor="selling_price_htva" className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                      <ArrowUpFromLine className="h-4 w-4 text-emerald-600" />
-                      Prix de vente HTVA (€)
-                    </Label>
-                    <Input
-                      id="selling_price_htva"
-                      type="number"
-                      step="0.01"
-                      value={formData.selling_price_htva || ''}
-                      onChange={(e) => handleInputChange('selling_price_htva', parseFloat(e.target.value))}
-                      onKeyDown={handleKeyDown}
-                      placeholder="0.00"
-                      className="h-10"
-                    />
-                  </div>
+                  <AIInputWrapper isAIGenerated={aiFilledFields.has('selling_price_htva')}>
+                    <div className="space-y-2">
+                      <Label htmlFor="selling_price_htva" className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                        <ArrowUpFromLine className="h-4 w-4 text-emerald-600" />
+                        Prix de vente HTVA (€)
+                      </Label>
+                      <Input
+                        id="selling_price_htva"
+                        type="number"
+                        step="0.01"
+                        value={formData.selling_price_htva || ''}
+                        onChange={(e) => handleInputChange('selling_price_htva', parseFloat(e.target.value))}
+                        onKeyDown={handleKeyDown}
+                        placeholder="0.00"
+                        className="h-10"
+                      />
+                    </div>
+                  </AIInputWrapper>
                 </div>
 
                 {/* Marge calculée */}

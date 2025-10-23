@@ -150,16 +150,16 @@ export default function Home() {
         <div className="p-4">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20">
-              <Loader2 className="h-12 w-12 animate-spin text-blue-600 mb-4" />
-              <p className="text-gray-600">Chargement des produits...</p>
+              <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+              <p className="text-muted-foreground">Chargement des produits...</p>
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="text-center py-20">
-              <Package className="h-20 w-20 text-gray-300 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <Package className="h-20 w-20 text-muted mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-foreground mb-2">
                 {searchQuery ? 'Aucun résultat' : 'Aucun produit'}
               </h2>
-              <p className="text-gray-600 mb-6">
+              <p className="text-muted-foreground mb-6">
                 {searchQuery
                   ? 'Essayez une autre recherche'
                   : 'Commencez par ajouter un produit'}

@@ -34,25 +34,25 @@ export default function CompactProductListItem({
       return { 
         label: 'Rupture', 
         variant: 'destructive' as const,
-        color: 'text-red-600',
-        bgColor: 'bg-red-50',
-        iconColor: 'text-red-500'
+        color: 'text-destructive',
+        bgColor: 'bg-destructive/10',
+        iconColor: 'text-destructive'
       };
     } else if (product.quantity < 5) {
       return { 
         label: 'Stock faible', 
         variant: 'secondary' as const,
-        color: 'text-orange-600',
-        bgColor: 'bg-orange-50',
-        iconColor: 'text-orange-500'
+        color: 'text-orange-600 dark:text-orange-400',
+        bgColor: 'bg-orange-500/10',
+        iconColor: 'text-orange-600 dark:text-orange-400'
       };
     } else {
       return { 
         label: 'En stock', 
         variant: 'default' as const,
-        color: 'text-green-600',
-        bgColor: 'bg-green-50',
-        iconColor: 'text-green-500'
+        color: 'text-green-600 dark:text-green-400',
+        bgColor: 'bg-green-500/10',
+        iconColor: 'text-green-600 dark:text-green-400'
       };
     }
   };

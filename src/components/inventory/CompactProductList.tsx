@@ -83,16 +83,16 @@ export default function CompactProductList({
 
   const getSortIcon = (field: SortField) => {
     if (sortConfig.field !== field) {
-      return <ChevronsUpDown className="h-3 w-3 text-gray-400" />;
+      return <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />;
     }
 
     if (sortConfig.direction === 'asc') {
-      return <ChevronUp className="h-3 w-3 text-gray-600" />;
+      return <ChevronUp className="h-3 w-3 text-foreground" />;
     } else if (sortConfig.direction === 'desc') {
-      return <ChevronDown className="h-3 w-3 text-gray-600" />;
+      return <ChevronDown className="h-3 w-3 text-foreground" />;
     }
 
-    return <ChevronsUpDown className="h-3 w-3 text-gray-400" />;
+    return <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />;
   };
 
   const applyFilters = (newFilterConfig: FilterConfig) => {
@@ -272,7 +272,7 @@ export default function CompactProductList({
           </button>
           {columnVisibility.manufacturer_ref && (
             <button 
-              className="w-24 flex items-center gap-1 hover:text-gray-800 transition-colors"
+              className="w-24 flex items-center gap-1 hover:text-foreground transition-colors"
               onClick={() => handleSort('manufacturer_ref')}
             >
               <Hash className="h-3 w-3" />
@@ -282,7 +282,7 @@ export default function CompactProductList({
           )}
           {columnVisibility.category && (
             <button 
-              className="w-32 flex items-center gap-1 hover:text-gray-800 transition-colors"
+              className="w-32 flex items-center gap-1 hover:text-foreground transition-colors"
               onClick={() => handleSort('category')}
             >
               <Tag className="h-3 w-3" />
@@ -292,14 +292,14 @@ export default function CompactProductList({
           )}
           {columnVisibility.brand && (
             <div className="w-24 text-center">
-              <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Marque
               </span>
             </div>
           )}
           {columnVisibility.quantity && (
             <button 
-              className="w-20 flex items-center justify-end gap-1 hover:text-gray-800 transition-colors"
+              className="w-20 flex items-center justify-end gap-1 hover:text-foreground transition-colors"
               onClick={() => handleSort('quantity')}
             >
               <span>Stock</span>
@@ -308,7 +308,7 @@ export default function CompactProductList({
           )}
           {columnVisibility.selling_price_htva && (
             <button 
-              className="w-20 flex items-center justify-end gap-1 hover:text-gray-800 transition-colors"
+              className="w-20 flex items-center justify-end gap-1 hover:text-foreground transition-colors"
               onClick={() => handleSort('selling_price_htva')}
             >
               <span>Prix Vente</span>
@@ -317,7 +317,7 @@ export default function CompactProductList({
           )}
           {columnVisibility.purchase_price_htva && (
             <button 
-              className="w-20 flex items-center justify-end gap-1 hover:text-gray-800 transition-colors"
+              className="w-20 flex items-center justify-end gap-1 hover:text-foreground transition-colors"
               onClick={() => handleSort('purchase_price_htva')}
             >
               <span>Prix Achat</span>
@@ -342,10 +342,10 @@ export default function CompactProductList({
       </div>
 
       {/* Liste des produits */}
-      <div className="bg-white">
+      <div className="bg-card">
         {processedProducts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-gray-500">
-            <Package className="h-8 w-8 mb-2 text-gray-300" />
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+            <Package className="h-8 w-8 mb-2 text-muted" />
             <p className="text-sm">Aucun produit trouvé</p>
           </div>
         ) : (

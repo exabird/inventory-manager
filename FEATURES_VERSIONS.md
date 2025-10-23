@@ -35,6 +35,69 @@ Ce document liste toutes les features de l'application avec leurs versions respe
 
 ---
 
+## 🤖 Remplissage IA v1.0
+
+**Date de release** : Janvier 2025  
+**Version app** : v0.1.30  
+**Statut** : ✅ Stable
+
+### Description
+
+Fonctionnalité complète de détection et de remplissage automatique des informations produit via des services externes et l'IA Claude.
+
+### Composée de 2 fonctions indépendantes
+
+#### Fonction 1 : Remplissage Automatique (Scan Code-Barres)
+
+**Déclencheur** : ⚡ Automatique lors du scan de code-barres  
+**API** : Barcode Lookup  
+
+**Caractéristiques** :
+- Appel automatique après détection du code-barres
+- Rempli les champs de base : nom, marque, fabricant, description courte, catégorie
+- **UNIQUEMENT si les champs sont vides** (ne jamais écraser les données existantes)
+- Pas de cache pour garantir des données fraîches
+- Gratuit (100 requêtes/jour)
+
+#### Fonction 2 : Remplissage IA Avancé (Bouton 🤖)
+
+**Déclencheur** : 🖱️ Clic sur bouton "Remplir avec IA"  
+**API** : Anthropic Claude 3.5 Sonnet  
+
+**Caractéristiques** :
+- Bouton avec gradient violet-rose dans la section "Informations de base"
+- Claude recherche automatiquement sur le site officiel de la marque
+- Extraction complète des informations : spécifications techniques, prix, garantie, etc.
+- Les champs remplis par l'IA sont marqués avec une **icône robot 🤖 bleue**
+- Indicateur de chargement "Analyse IA..." pendant le traitement
+- Pas de cache pour garantir des données à jour
+- Coût : ~0.01€/produit (pay-as-you-go)
+
+**Champs remplis par l'IA** :
+- ✅ Nom complet du produit
+- ✅ Marque
+- ✅ Fabricant
+- ✅ Référence fabricant exacte
+- ✅ Description courte
+- ✅ Description longue (notes)
+- ✅ Prix de vente HTVA
+- ✅ Période de garantie
+- ✅ Catégorie
+- ✅ Spécifications techniques (metadata)
+
+### Composants
+
+- `src/components/inventory/ProductInspector.tsx` (UI + logique)
+- `src/lib/productDetectionService.ts` (Fonction 1 - Barcode Lookup)
+- `src/app/api/ai-fill/route.ts` (Fonction 2 - Claude API)
+- `src/components/ui/AIFieldIndicator.tsx` (Indicateur visuel robot)
+
+### Configuration requise
+
+Voir `docs/API_KEYS_SETUP.md` pour la configuration des clés API.
+
+---
+
 ## 📊 Prochaines Features
 
 ### Scanner v2.0 (Planifié)
