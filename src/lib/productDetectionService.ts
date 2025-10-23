@@ -1,6 +1,14 @@
 /**
  * Service pour la détection automatique des informations produit
- * Basé sur le code-barres scanné
+ * 
+ * FONCTION 1 : Scan code-barres → Barcode Lookup API
+ * - Remplir les champs de base (nom, marque, etc.)
+ * - UNIQUEMENT si les champs sont vides
+ * - Ne JAMAIS écraser les données existantes
+ * 
+ * FONCTION 2 : Bouton IA → Claude (à implémenter)
+ * - Recherche avancée sur site marque
+ * - Remplissage complet via IA
  */
 
 export interface ProductInfo {
@@ -15,61 +23,84 @@ export interface ProductInfo {
 
 export class ProductDetectionService {
   /**
-   * Simule la détection automatique des infos produit
-   * Dans une vraie implémentation, cela appellerait une API externe
+   * FONCTION 1 : Détection basique via Barcode Lookup API
+   * Appelé automatiquement après le scan du code-barres
    */
   static async detectProductInfo(barcode: string): Promise<ProductInfo> {
-    // Simulation d'une API de détection de produit
-    // Dans la réalité, cela pourrait être:
-    // - Open Food Facts API
-    // - Google Product Search API
-    // - API propriétaire de détection d'images
+    console.log('🔍 [Fonction 1] Détection basique pour:', barcode);
     
-    console.log('🔍 Détection automatique pour le code-barres:', barcode);
+    const apiKey = process.env.NEXT_PUBLIC_BARCODE_LOOKUP_API_KEY;
     
-    // Simulation d'un délai d'API
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Si pas de clé API, retourner des données vides
+    if (!apiKey || apiKey === 'your_barcode_lookup_key_here') {
+      console.warn('⚠️ [Fonction 1] Pas de clé API Barcode Lookup configurée');
+      console.warn('⚠️ Obtenir une clé sur : https://www.barcodelookup.com/api');
+      return {
+        name: '',
+        brand: '',
+        manufacturer: '',
+        description: '',
+        category: '',
+        price: undefined,
+        image: ''
+      };
+    }
     
-    // Simulation de données détectées
-    const mockData: Record<string, ProductInfo> = {
-      '1234567890123': {
-        name: 'iPhone 15 Pro',
-        brand: 'Apple',
-        manufacturer: 'Apple Inc.',
-        description: 'Smartphone haut de gamme avec processeur A17 Pro',
-        category: 'Électronique',
-        price: 1199.99,
-        image: 'https://example.com/iphone15pro.jpg'
-      },
-      '2345678901234': {
-        name: 'MacBook Air M2',
-        brand: 'Apple',
-        manufacturer: 'Apple Inc.',
-        description: 'Ordinateur portable ultra-fin avec puce M2',
-        category: 'Informatique',
-        price: 1299.99,
-        image: 'https://example.com/macbookair.jpg'
-      },
-      '3456789012345': {
-        name: 'AirPods Pro',
-        brand: 'Apple',
-        manufacturer: 'Apple Inc.',
-        description: 'Écouteurs sans fil avec réduction de bruit active',
-        category: 'Audio',
-        price: 249.99,
-        image: 'https://example.com/airpodspro.jpg'
+    try {
+      console.log('📡 [Fonction 1] Appel Barcode Lookup API...');
+      
+      const response = await fetch(
+        `https://api.barcodelookup.com/v3/products?barcode=${barcode}&formatted=y&key=${apiKey}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
       }
-    };
-    
-    // Retourner les données simulées ou des données par défaut
-    return mockData[barcode] || {
-      name: `Produit ${barcode}`,
-      brand: 'Marque inconnue',
-      manufacturer: 'Fabricant inconnu',
-      description: 'Description non disponible',
-      category: 'Non catégorisé',
-      price: 0
-    };
+      
+      const data = await response.json();
+      console.log('✅ [Fonction 1] Réponse API:', data);
+      
+      // Extraire les données du premier produit trouvé
+      if (data.products && data.products.length > 0) {
+        const product = data.products[0];
+        
+        const productInfo: ProductInfo = {
+          name: product.title || product.product_name || '',
+          brand: product.brand || '',
+          manufacturer: product.manufacturer || '',
+          description: product.description || '',
+          category: product.category || '',
+          price: undefined, // On ne prend pas le prix de l'API (peut être obsolète)
+          image: product.images && product.images.length > 0 ? product.images[0] : ''
+        };
+        
+        console.log('✅ [Fonction 1] Données extraites:', productInfo);
+        return productInfo;
+      } else {
+        console.warn('⚠️ [Fonction 1] Aucun produit trouvé pour ce code-barres');
+        return {
+          name: '',
+          brand: '',
+          manufacturer: '',
+          description: '',
+          category: '',
+          price: undefined,
+          image: ''
+        };
+      }
+      
+    } catch (error) {
+      console.error('❌ [Fonction 1] Erreur API:', error);
+      return {
+        name: '',
+        brand: '',
+        manufacturer: '',
+        description: '',
+        category: '',
+        price: undefined,
+        image: ''
+      };
+    }
   }
   
   /**
