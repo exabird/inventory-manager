@@ -176,19 +176,16 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
 
       const config = {
         fps: 10,  // FPS RÉDUIT = plus de temps pour décoder chaque frame
-        qrbox: function(viewfinderWidth: number, viewfinderHeight: number) {
-          // Zone MAXIMALE (98%x70%) pour scan à distance optimale
-          const width = Math.floor(viewfinderWidth * 0.98);
-          const height = Math.floor(viewfinderHeight * 0.7);
-          console.log('📐 [BarcodeScanner] Zone de scan:', width, 'x', height);
-          return { width, height };
-        },
+        // PAS de qrbox = analyse TOUTE l'image (meilleure portée)
         disableFlip: true,  // Désactiver flip pour gain de perf
-        // Configuration vidéo optimisée - contraintes souples pour compatibilité
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true  // API native si disponible
+        },
+        // Configuration vidéo haute résolution pour détection à distance
         videoConstraints: {
           facingMode: 'environment',
-          width: { ideal: 1920 },       // Full HD (plus compatible)
-          height: { ideal: 1080 },      // Full HD (plus compatible)
+          width: { ideal: 3840 },       // 4K si possible (meilleure détection)
+          height: { ideal: 2160 },      // 4K si possible
           aspectRatio: { ideal: 16/9 }
         },
         // Formats supportés (tous les codes-barres standards)
@@ -843,12 +840,12 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       {!isScanning && !error && (
         <div className="absolute bottom-8 left-0 right-0 px-6">
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-white text-sm">
-            <p className="font-semibold mb-2">💡 Pour scanner de loin :</p>
+            <p className="font-semibold mb-2">💡 Conseils de scan :</p>
             <ul className="space-y-1 text-white/80">
-              <li>⚡ <strong>Activez le FLASH</strong> (bouton en haut à droite)</li>
-              <li>📱 Tenez votre iPhone bien stable</li>
-              <li>🎯 Le code-barres doit remplir ~50% de la zone</li>
-              <li>⏱️ Laissez 2-3 secondes pour la détection</li>
+              <li>⚡ <strong>Flash activé</strong> = portée maximale</li>
+              <li>📱 Tenez stable 2-3 secondes</li>
+              <li>🎯 Code visible = code détectable</li>
+              <li>📏 Distance optimale : 15-30cm</li>
             </ul>
           </div>
         </div>
