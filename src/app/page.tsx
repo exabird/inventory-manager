@@ -236,6 +236,11 @@ export default function Home() {
     }
   };
 
+  const handleSelectProduct = (product: Product) => {
+    setEditingProduct(product);
+    setShowProductForm(true);
+  };
+
   const handleStockEdit = (product: Product) => {
     setEditingProduct(product);
     setShowProductForm(true);
