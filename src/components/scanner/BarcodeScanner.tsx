@@ -183,7 +183,7 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
                 // Si on a plusieurs codes, arrêter le scan et proposer la sélection
                 if (newCodes.length >= 2) {
                   console.log('🔀 [BarcodeScanner] Plusieurs codes détectés, affichage sélection');
-                  stopScanning();
+                  stopScanning().catch(err => console.error('Erreur stopScanning:', err));
                   setShowCodeSelection(true);
                   return newCodes;
                 }
@@ -200,15 +200,18 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
                         // Afficher feedback de succès
                         setScanSuccess(true);
                         
-                        // Arrêter le scanner et transmettre le code
-                        setTimeout(() => {
-                          stopScanning();
+                        // Arrêter le scanner, transmettre le code et fermer
+                        setTimeout(async () => {
+                          await stopScanning();
                           onScanSuccess(bestCode);
+                          onClose();
                         }, 500); // Petit délai pour voir le feedback
                       } catch (error) {
                         console.error('❌ [BarcodeScanner] Erreur lors de la sélection du code:', error);
-                        stopScanning();
-                        onScanSuccess(decodedText); // Fallback au code original
+                        stopScanning().then(() => {
+                          onScanSuccess(decodedText); // Fallback au code original
+                          onClose();
+                        });
                       }
                     }
                     return current;
@@ -221,9 +224,15 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
             });
           } catch (error) {
             console.error('❌ [BarcodeScanner] Erreur lors du traitement du code:', error);
-            // En cas d'erreur, utiliser directement le code détecté
-            stopScanning();
-            onScanSuccess(decodedText);
+            // En cas d'erreur, utiliser directement le code détecté et fermer
+            stopScanning().then(() => {
+              onScanSuccess(decodedText);
+              onClose();
+            }).catch(err => {
+              console.error('Erreur stopScanning:', err);
+              onScanSuccess(decodedText);
+              onClose();
+            });
           }
         },
         (errorMessage) => {
@@ -400,10 +409,12 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       setShowCodeSelection(false);
       setDetectedCodes([]);
       onScanSuccess(selectedCode);
+      onClose();
     } catch (error) {
       console.error('❌ [BarcodeScanner] Erreur lors de la sélection du code:', error);
-      // En cas d'erreur, essayer quand même de transmettre le code
+      // En cas d'erreur, essayer quand même de transmettre le code et fermer
       onScanSuccess(selectedCode);
+      onClose();
     }
   };
 
