@@ -5,6 +5,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { Camera, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
 
 interface BarcodeScannerProps {
   onScanSuccess: (decodedText: string) => void;
@@ -15,6 +16,7 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const isMountedRef = useRef(true);
   const isProcessingRef = useRef(false);
+  const videoTrackRef = useRef<MediaStreamTrack | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cameras, setCameras] = useState<any[]>([]);
@@ -25,6 +27,8 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
   const [showCodeSelection, setShowCodeSelection] = useState(false);
   const [showCameraSelection, setShowCameraSelection] = useState(false);
   const [scanSuccess, setScanSuccess] = useState(false);
+  const [flashEnabled, setFlashEnabled] = useState(false);
+  const [flashSupported, setFlashSupported] = useState(false);
   
   // Générer un ID unique CONSTANT pour éviter les conflits
   const scannerIdRef = useRef(`scanner-${Math.random().toString(36).substr(2, 9)}`);
@@ -88,16 +92,43 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
   };
 
   const stopScanning = async () => {
-    if (scannerRef.current) {
+    // Désactiver le flash si activé
+    if (flashEnabled && videoTrackRef.current) {
       try {
-        if (scannerRef.current.isScanning) {
-          await scannerRef.current.stop();
-        }
-        scannerRef.current.clear();
-        setIsScanning(false);
+        await videoTrackRef.current.applyConstraints({
+          advanced: [{ torch: false } as any]
+        });
+        setFlashEnabled(false);
+        console.log('💡 [BarcodeScanner] Flash désactivé');
       } catch (err) {
-        console.error('Error stopping scanner:', err);
+        console.warn('⚠️ [BarcodeScanner] Impossible de désactiver le flash:', err);
       }
+    }
+
+    if (!scannerRef.current) {
+      console.log('🔍 [BarcodeScanner] Pas de scanner à arrêter');
+      return;
+    }
+
+    try {
+      // Vérifier l'état avant d'arrêter
+      const state = await scannerRef.current.getState();
+      console.log('🔍 [BarcodeScanner] État du scanner:', state);
+      
+      // Scanner states: NOT_STARTED = 1, SCANNING = 2, PAUSED = 3
+      if (state === 2) { // SCANNING
+        console.log('🛑 [BarcodeScanner] Arrêt du scanner en cours...');
+        await scannerRef.current.stop();
+        console.log('✅ [BarcodeScanner] Scanner arrêté');
+      } else {
+        console.log('⚠️ [BarcodeScanner] Scanner déjà arrêté ou non démarré (état:', state, ')');
+      }
+      
+      setIsScanning(false);
+    } catch (err) {
+      console.error('❌ [BarcodeScanner] Erreur lors de l\'arrêt du scanner:', err);
+      // Forcer l'état à false même en cas d'erreur
+      setIsScanning(false);
     }
   };
 
@@ -131,18 +162,43 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       
       setIsScanning(true);
 
+      // Détecter iPhone pour optimisations spécifiques
+      const isIPhone = /iPhone/.test(navigator.userAgent);
+      console.log('📱 [BarcodeScanner] iPhone détecté:', isIPhone);
+
       const config = {
-        fps: 10,  // FPS stable pour bonne détection
-        qrbox: { width: 350, height: 200 },  // Zone agrandie pour faciliter scan
-        aspectRatio: 1.777778,  // 16:9
+        fps: isIPhone ? 20 : 30,  // FPS optimisé pour iPhone (20 = bon équilibre perf/qualité)
+        qrbox: function(viewfinderWidth: number, viewfinderHeight: number) {
+          // Zone très large pour faciliter la détection
+          const width = Math.floor(viewfinderWidth * 0.9);
+          const height = Math.floor(viewfinderHeight * 0.5);
+          console.log('📐 [BarcodeScanner] Zone de scan:', width, 'x', height);
+          return { width, height };
+        },
         disableFlip: false,
-        // Configuration vidéo optimale pour codes-barres
-        videoConstraints: {
+        // Configuration vidéo optimisée iPhone Pro Max
+        videoConstraints: isIPhone ? {
           facingMode: 'environment',
-          focusMode: 'continuous',
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          aspectRatio: { ideal: 16/9 }
+        } : {
+          facingMode: 'environment',
           width: { ideal: 1920 },
           height: { ideal: 1080 }
-        }
+        },
+        // Formats supportés (tous les codes-barres standards)
+        formatsToSupport: [
+          0,  // QR_CODE
+          5,  // CODE_128
+          6,  // CODE_39
+          7,  // CODE_93
+          8,  // EAN_13
+          9,  // EAN_8
+          13, // UPC_A
+          14, // UPC_E
+          15, // UPC_EAN_EXTENSION
+        ]
       };
 
       console.log('🔄 Démarrage du scanner avec caméra:', cameraId);
@@ -298,40 +354,47 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
           setCameras(devices);
           
           // Debug: Afficher toutes les caméras disponibles
-          console.log('📷 Caméras disponibles:', devices.map(d => d.label));
+          console.log('📷 Caméras disponibles:', devices.map(d => ({ id: d.id, label: d.label })));
           
-          // Priorité 1: Caméra ultra grand angle arrière (différentes variantes)
+          // Détecter si on est sur iPhone
+          const isIPhone = /iPhone/.test(navigator.userAgent);
+          console.log('📱 iPhone détecté:', isIPhone);
+          
+          // Priorité 1: Caméra ultra grand angle arrière (iPhone Pro)
           const ultraWideBackCamera = devices.find((device) => {
             const label = device.label.toLowerCase();
-            return (label.includes('ultra') && label.includes('back')) ||
-                   (label.includes('ultra') && label.includes('rear')) ||
+            // Sur iPhone: "Back Ultra Wide Camera" ou patterns similaires
+            return (label.includes('ultra') && (label.includes('back') || label.includes('rear'))) ||
+                   (label.includes('ultra wide') && label.includes('back')) ||
+                   (label.includes('0.5') && label.includes('back')) || // iPhone nomme parfois par facteur zoom
                    (label.includes('ultra') && label.includes('environment')) ||
-                   (label.includes('ultra') && !label.includes('front') && !label.includes('avant'));
+                   (label.includes('ultra') && !label.includes('front') && !label.includes('face') && !label.includes('avant'));
           });
           
-          // Priorité 2: Caméra arrière normale (différentes variantes) - EXCLURE front/avant
+          // Priorité 2: Caméra grand angle arrière (caméra principale iPhone)
+          const wideBackCamera = devices.find((device) => {
+            const label = device.label.toLowerCase();
+            return (label.includes('wide') && label.includes('back')) ||
+                   (label.includes('1x') && label.includes('back')) || // iPhone nomme parfois par facteur zoom
+                   (label.includes('back') && !label.includes('ultra') && !label.includes('telephoto'));
+          });
+          
+          // Priorité 3: N'importe quelle caméra arrière - EXCLURE front/avant
           const backCamera = devices.find((device) => {
             const label = device.label.toLowerCase();
-            return (label.includes('back') && !label.includes('front') && !label.includes('avant')) ||
-                   (label.includes('rear') && !label.includes('front') && !label.includes('avant')) ||
-                   (label.includes('environment') && !label.includes('front') && !label.includes('avant'));
-          });
-          
-          // Priorité 3: Caméra avec "environment" ou "rear" - EXCLURE front/avant
-          const rearCamera = devices.find((device) => {
-            const label = device.label.toLowerCase();
-            return (label.includes('environment') || label.includes('rear')) && 
-                   !label.includes('front') && !label.includes('avant');
+            return (label.includes('back') || label.includes('rear') || label.includes('environment')) && 
+                   !label.includes('front') && !label.includes('face') && !label.includes('avant');
           });
           
           const bestCamera = ultraWideBackCamera?.id || 
+            wideBackCamera?.id ||
             backCamera?.id || 
-            rearCamera?.id || 
-            devices[0].id;
+            devices[devices.length - 1]?.id; // Dernière caméra souvent = arrière
           
           // Debug: Afficher la caméra sélectionnée
-          const selectedCameraLabel = devices.find(d => d.id === bestCamera)?.label;
-          console.log('📷 Caméra sélectionnée:', selectedCameraLabel);
+          const selectedCameraInfo = devices.find(d => d.id === bestCamera);
+          console.log('✅ Caméra sélectionnée:', selectedCameraInfo?.label);
+          console.log('✅ ID:', selectedCameraInfo?.id);
           
           setSelectedCamera(bestCamera);
           
@@ -409,6 +472,74 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
     onClose();
   };
 
+  // Fonction pour activer/désactiver le flash
+  const toggleFlash = async () => {
+    try {
+      // Récupérer le track vidéo du scanner
+      const videoElement = document.querySelector(`#${scannerId} video`) as HTMLVideoElement;
+      
+      if (!videoElement || !videoElement.srcObject) {
+        console.warn('⚠️ [BarcodeScanner] Impossible de trouver le stream vidéo');
+        return;
+      }
+
+      const stream = videoElement.srcObject as MediaStream;
+      const track = stream.getVideoTracks()[0];
+      
+      if (!track) {
+        console.warn('⚠️ [BarcodeScanner] Aucun track vidéo trouvé');
+        return;
+      }
+
+      videoTrackRef.current = track;
+
+      // Vérifier les capacités
+      const capabilities = track.getCapabilities() as any;
+      console.log('📸 [BarcodeScanner] Capacités caméra:', capabilities);
+
+      if (!capabilities.torch) {
+        console.warn('⚠️ [BarcodeScanner] Flash non supporté sur cet appareil');
+        setFlashSupported(false);
+        return;
+      }
+
+      setFlashSupported(true);
+      const newFlashState = !flashEnabled;
+
+      // Activer/désactiver le flash
+      await track.applyConstraints({
+        advanced: [{ torch: newFlashState } as any]
+      });
+
+      setFlashEnabled(newFlashState);
+      console.log(`💡 [BarcodeScanner] Flash ${newFlashState ? 'activé' : 'désactivé'}`);
+      
+    } catch (error) {
+      console.error('❌ [BarcodeScanner] Erreur lors du toggle flash:', error);
+    }
+  };
+
+  // Vérifier le support du flash au démarrage du scan
+  useEffect(() => {
+    if (isScanning) {
+      // Attendre que le stream soit initialisé
+      setTimeout(async () => {
+        const videoElement = document.querySelector(`#${scannerId} video`) as HTMLVideoElement;
+        if (videoElement && videoElement.srcObject) {
+          const stream = videoElement.srcObject as MediaStream;
+          const track = stream.getVideoTracks()[0];
+          if (track) {
+            const capabilities = track.getCapabilities() as any;
+            if (capabilities.torch) {
+              setFlashSupported(true);
+              console.log('✅ [BarcodeScanner] Flash supporté !');
+            }
+          }
+        }
+      }, 1000);
+    }
+  }, [isScanning, scannerId]);
+
   return (
     <div className="fixed inset-0 z-50 bg-black">
       {/* Header */}
@@ -446,7 +577,22 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
 
         {/* Boutons de contrôle dans la vue de scan */}
         {isScanning && (
-          <div className="absolute top-20 right-4 flex gap-2">
+          <div className="absolute top-20 right-4 flex flex-col gap-2">
+            {/* Bouton Flash */}
+            {flashSupported && (
+              <Button
+                onClick={toggleFlash}
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "bg-white/90 hover:bg-white border-white/20",
+                  flashEnabled ? "text-yellow-500 font-bold" : "text-black"
+                )}
+              >
+                {flashEnabled ? '⚡ Flash ON' : '💡 Flash OFF'}
+              </Button>
+            )}
+            
             <Button
               onClick={() => {
                 stopScanning();
