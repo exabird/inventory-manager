@@ -1,82 +1,38 @@
 # 📚 Documentation Inventory Manager
 
-## 📁 Structure de la Documentation
+Documentation technique du projet de gestion d'inventaire.
 
-### 📋 Documents Essentiels (À CONSERVER)
+## 📖 Documents Principaux
 
-#### **APPLICATION_DOCUMENTATION.md** 📱
-- Vue d'ensemble de l'application
-- Structure du projet
-- Schéma de base de données
-- Guide d'utilisation basique
+### Architecture et Code
+- **[ARCHITECTURE_GUIDE.md](ARCHITECTURE_GUIDE.md)** - Architecture complète du projet (97 KB)
+- **[APPLICATION_DOCUMENTATION.md](APPLICATION_DOCUMENTATION.md)** - Documentation de l'application
 
-#### **DEVELOPMENT_PROCESSES.md** ⚠️ CRITIQUE
-- Processus strict de développement pour agents IA
-- Workflow obligatoire : Tests → Validation → Déploiement
-- **NE JAMAIS MODIFIER** sans validation utilisateur
+### Guides Pratiques
+- **[DEBUGGING_GUIDE.md](DEBUGGING_GUIDE.md)** - Guide de debugging complet (159 KB)
+- **[QUICK_START.md](QUICK_START.md)** - Démarrage rapide
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Guide de déploiement
+- **[MONITORING.md](MONITORING.md)** - Monitoring et logs
 
-#### **SIMPLIFIED_DEVELOPMENT.md** 🚀
-- Guide de développement simplifié
-- Bonnes pratiques
-- Commandes utiles
+### Base de Données
+- **[database-setup.sql](database-setup.sql)** - Script de création de la base
+- **[database-migration-pieces.sql](database-migration-pieces.sql)** - Migration pièces
+- **[database-migration-stock.sql](database-migration-stock.sql)** - Migration stock
 
-#### **QUICK_START.md** ⚡
-- Installation rapide
-- Configuration de base
-- Premier démarrage
+### Développement
+- **[PRODUCT_FIELD_TEMPLATE.md](PRODUCT_FIELD_TEMPLATE.md)** - Template pour ajouter des champs
+- **[PHASE2_AI_INTEGRATION.md](PHASE2_AI_INTEGRATION.md)** - Roadmap Phase 2 (IA)
 
-#### **DEPLOYMENT.md** 🚀
-- Processus de déploiement
-- Configuration Vercel
-- Variables d'environnement
+## 🔗 Autres Documents
 
-#### **MONITORING.md** 📊
-- Surveillance des logs
-- Debugging
-- Performance
+- **Règles Cursor** : `.cursor/rules/*.mdc` (à la racine du workspace)
+- **Instructions Agent** : `AGENTS.md` (à la racine du projet)
+- **Index Complet** : `DOCUMENTATION_INDEX.md` (à la racine du projet)
+- **Changelog** : `CHANGELOG.md` (à la racine du projet)
 
-### 🗄️ Fichiers SQL
+## 📌 Note
 
-- **database-setup.sql** : Structure initiale de la base
-- **database-migration-*.sql** : Migrations spécifiques
+Ce dossier contient la **documentation technique** du projet. Les **règles pour l'agent IA** sont dans `.cursor/rules/` à la racine du workspace, et le **CHANGELOG** est à la racine du projet.
 
-### 📝 Fichiers Historiques
-
-- **CHANGELOG.md** : Historique des versions
-- **PHASE2_AI_INTEGRATION.md** : Plan futur IA
-
----
-
-## ⚠️ RÈGLES DE DOCUMENTATION
-
-### ✅ À FAIRE
-1. **Documenter la structure générale** de l'app
-2. **Documenter les processus** de développement
-3. **Tenir à jour le CHANGELOG** pour les versions majeures
-4. **Documenter les features** de façon concise
-
-### ❌ À NE PAS FAIRE
-1. **NE PAS** créer de guides de test détaillés pour chaque petite modification
-2. **NE PAS** créer de multiples versions d'un même guide
-3. **NE PAS** documenter chaque correction de bug en détail
-4. **NE PAS** créer de guides "UX FIX" ou "CORRECTIONS" détaillés
-
-### 📏 Principe
-> **SIMPLE ET CONCIS** : La documentation doit faciliter le développement, pas le ralentir.
-
----
-
-## 🔄 Mise à Jour
-
-La documentation doit être mise à jour uniquement pour :
-- Nouvelles fonctionnalités majeures
-- Changements de structure
-- Modifications des processus de développement
-- Nouvelles dépendances ou outils
-
-**Les petites corrections et améliorations vont dans le CHANGELOG uniquement.**
-
-
-
-
+Pour une navigation complète, consultez : [DOCUMENTATION_INDEX.md](../DOCUMENTATION_INDEX.md)
 

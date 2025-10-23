@@ -22,6 +22,7 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
   const [detectedCodes, setDetectedCodes] = useState<string[]>([]);
   const [showCodeSelection, setShowCodeSelection] = useState(false);
   const [showCameraSelection, setShowCameraSelection] = useState(false);
+  const [scanSuccess, setScanSuccess] = useState(false);
   
   // Générer un ID unique CONSTANT pour éviter les conflits
   const scannerIdRef = useRef(`scanner-${Math.random().toString(36).substr(2, 9)}`);
@@ -129,18 +130,33 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       setIsScanning(true);
 
       const config = {
-        fps: 30,  // Augmenté pour meilleure détection
+        fps: 60,  // FPS élevé pour meilleure détection
         qrbox: function(viewfinderWidth: number, viewfinderHeight: number) {
-          // Zone de scan adaptative
+          // Zone de scan plus grande pour faciliter la détection
           const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-          const qrboxSize = Math.floor(minEdge * 0.7);
+          const qrboxSize = Math.floor(minEdge * 0.85);
           return {
             width: qrboxSize,
-            height: qrboxSize
+            height: Math.floor(qrboxSize * 0.4) // Rectangle horizontal pour codes-barres
           };
         },
         aspectRatio: 1.777778,  // 16:9
         disableFlip: false,
+        // Formats de codes-barres à détecter en priorité
+        formatsToSupport: [
+          0,  // QR_CODE
+          8,  // EAN_13
+          9,  // EAN_8
+          13, // UPC_A
+          14, // UPC_E
+          5,  // CODE_128
+          6,  // CODE_39
+          7,  // CODE_93
+        ],
+        // Améliorer la détection
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true
+        }
       };
 
       console.log('🔄 Démarrage du scanner avec caméra:', cameraId);
@@ -150,42 +166,61 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
         config,
         (decodedText) => {
           try {
-            console.log('Code détecté:', decodedText);
+            console.log('📦 [BarcodeScanner] Code détecté:', decodedText);
+            
+            // Vérifier que le code n'est pas vide
+            if (!decodedText || decodedText.trim() === '') {
+              console.warn('⚠️ [BarcodeScanner] Code vide ignoré');
+              return;
+            }
             
             // Ajouter le code à la liste des codes détectés
             setDetectedCodes(prev => {
               if (!prev.includes(decodedText)) {
                 const newCodes = [...prev, decodedText];
+                console.log('📊 [BarcodeScanner] Codes détectés:', newCodes.length);
                 
                 // Si on a plusieurs codes, arrêter le scan et proposer la sélection
                 if (newCodes.length >= 2) {
+                  console.log('🔀 [BarcodeScanner] Plusieurs codes détectés, affichage sélection');
                   stopScanning();
                   setShowCodeSelection(true);
                   return newCodes;
                 }
                 
-                // Si c'est le premier code, continuer à scanner brièvement pour détecter d'autres codes
+                // Si c'est le premier code, attendre brièvement pour détecter d'autres codes
                 setTimeout(() => {
-                  if (newCodes.length === 1) {
-                    try {
-                      // Auto-sélection du meilleur code après 1 seconde
-                      const bestCode = selectBestBarcode(newCodes);
-                      stopScanning();
-                      onScanSuccess(bestCode);
-                    } catch (error) {
-                      console.error('Erreur lors de la sélection du code:', error);
-                      stopScanning();
-                      onScanSuccess(decodedText); // Fallback au code original
+                  setDetectedCodes(current => {
+                    if (current.length === 1) {
+                      try {
+                        console.log('✅ [BarcodeScanner] Un seul code détecté, sélection automatique');
+                        const bestCode = selectBestBarcode(current);
+                        console.log('📤 [BarcodeScanner] Transmission du code:', bestCode);
+                        
+                        // Afficher feedback de succès
+                        setScanSuccess(true);
+                        
+                        // Arrêter le scanner et transmettre le code
+                        setTimeout(() => {
+                          stopScanning();
+                          onScanSuccess(bestCode);
+                        }, 500); // Petit délai pour voir le feedback
+                      } catch (error) {
+                        console.error('❌ [BarcodeScanner] Erreur lors de la sélection du code:', error);
+                        stopScanning();
+                        onScanSuccess(decodedText); // Fallback au code original
+                      }
                     }
-                  }
-                }, 1000);
+                    return current;
+                  });
+                }, 800); // Réduit à 800ms pour une meilleure réactivité
                 
                 return newCodes;
               }
               return prev;
             });
           } catch (error) {
-            console.error('Erreur lors du traitement du code:', error);
+            console.error('❌ [BarcodeScanner] Erreur lors du traitement du code:', error);
             // En cas d'erreur, utiliser directement le code détecté
             stopScanning();
             onScanSuccess(decodedText);
@@ -193,6 +228,7 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
         },
         (errorMessage) => {
           // Erreur de scan (normal si rien n'est détecté)
+          // On ne log pas pour éviter de polluer la console
         }
       );
     } catch (err: unknown) {
@@ -360,16 +396,14 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
 
   const handleCodeSelection = (selectedCode: string) => {
     try {
+      console.log('📤 [BarcodeScanner] Sélection manuelle du code:', selectedCode);
       setShowCodeSelection(false);
       setDetectedCodes([]);
       onScanSuccess(selectedCode);
-      onClose();
     } catch (error) {
-      console.error('Erreur lors de la sélection du code:', error);
-      // En cas d'erreur, fermer quand même l'interface
-      setShowCodeSelection(false);
-      setDetectedCodes([]);
-      onClose();
+      console.error('❌ [BarcodeScanner] Erreur lors de la sélection du code:', error);
+      // En cas d'erreur, essayer quand même de transmettre le code
+      onScanSuccess(selectedCode);
     }
   };
 
@@ -604,19 +638,38 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
           </div>
         )}
 
-        {isScanning && (
-          <div className="absolute bottom-8 left-0 right-0 text-center">
-            <div className="flex items-center justify-center text-white">
-              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              <span>Recherche de code...</span>
+        {isScanning && !scanSuccess && (
+          <div className="absolute bottom-8 left-0 right-0 px-6">
+            <div className="bg-black/60 backdrop-blur-sm rounded-lg p-4 text-center">
+              <div className="flex items-center justify-center text-white mb-3">
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                <span className="font-medium">Recherche de code...</span>
+              </div>
+              <div className="text-white/80 text-sm space-y-1 mb-4">
+                <p>📱 Tenez l'appareil stable</p>
+                <p>💡 Assurez un bon éclairage</p>
+                <p>🎯 Centrez le code-barres dans la zone</p>
+              </div>
+              <Button
+                onClick={stopScanning}
+                variant="outline"
+                className="bg-white/10 text-white border-white/20 hover:bg-white/20"
+              >
+                Arrêter le scan
+              </Button>
             </div>
-            <Button
-              onClick={stopScanning}
-              variant="outline"
-              className="mt-4 bg-white/10 text-white border-white/20 hover:bg-white/20"
-            >
-              Arrêter le scan
-            </Button>
+          </div>
+        )}
+
+        {/* Feedback de succès */}
+        {scanSuccess && (
+          <div className="absolute bottom-8 left-0 right-0 px-6">
+            <div className="bg-green-500 backdrop-blur-sm rounded-lg p-4 text-center animate-pulse">
+              <div className="flex items-center justify-center text-white">
+                <span className="text-4xl mr-3">✅</span>
+                <span className="font-bold text-lg">Code détecté !</span>
+              </div>
+            </div>
           </div>
         )}
       </div>

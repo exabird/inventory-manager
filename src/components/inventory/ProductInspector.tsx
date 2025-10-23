@@ -300,23 +300,39 @@ export default function ProductInspector({
   };
 
   const handleBarcodeScanned = async (scannedBarcode: string) => {
-    console.log('📱 Code-barres scanné:', scannedBarcode);
+    console.log('📱 [ProductInspector] Code-barres reçu du scanner:', scannedBarcode);
+    console.log('📱 [ProductInspector] Type:', typeof scannedBarcode);
+    console.log('📱 [ProductInspector] Longueur:', scannedBarcode?.length);
+    
+    // Vérifier que le code n'est pas vide
+    if (!scannedBarcode || scannedBarcode.trim() === '') {
+      console.error('❌ [ProductInspector] Code-barres vide reçu !');
+      setShowScanner(false);
+      return;
+    }
     
     // Mettre à jour le code-barres immédiatement
-    setFormData(prev => ({
-      ...prev,
-      barcode: scannedBarcode
-    }));
+    console.log('📝 [ProductInspector] Mise à jour du formData avec le code:', scannedBarcode);
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        barcode: scannedBarcode
+      };
+      console.log('✅ [ProductInspector] FormData mis à jour:', newData.barcode);
+      return newData;
+    });
     
+    // Fermer le scanner
+    console.log('🔒 [ProductInspector] Fermeture du scanner');
     setShowScanner(false);
     
     // Détection automatique des informations produit
     try {
-      console.log('🔍 Détection automatique des infos produit...');
+      console.log('🔍 [ProductInspector] Détection automatique des infos produit...');
       const detectedInfo = await ProductDetectionService.detectProductInfo(scannedBarcode);
       const validatedInfo = ProductDetectionService.validateDetectedData(detectedInfo);
       
-      console.log('✅ Infos détectées:', validatedInfo);
+      console.log('✅ [ProductInspector] Infos détectées:', validatedInfo);
       
       // Mettre à jour le formulaire avec les données détectées
       setFormData(prev => ({
@@ -329,11 +345,11 @@ export default function ProductInspector({
         // Note: category_id nécessiterait une correspondance avec les catégories existantes
       }));
       
-      // Afficher une notification de succès
-      console.log('🎉 Informations produit automatiquement détectées et remplies !');
+      console.log('🎉 [ProductInspector] Informations produit automatiquement détectées et remplies !');
       
     } catch (error) {
-      console.warn('⚠️ Erreur lors de la détection automatique:', error);
+      console.warn('⚠️ [ProductInspector] Erreur lors de la détection automatique:', error);
+      console.warn('⚠️ [ProductInspector] Le code-barres est quand même rempli');
       // Le code-barres est quand même rempli, mais pas les autres infos
     }
   };

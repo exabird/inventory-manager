@@ -87,37 +87,40 @@ Bienvenue dans la documentation complète de l'Inventory Manager. Cette page vou
 | **CURSOR_RULES_SETUP.md** | 12 KB | Configuration des règles Cursor ⭐ NEW |
 | **DOCUMENTATION_INDEX.md** | Ce fichier | Index de navigation |
 
-## 🤖 Règles Cursor (Nouveau!)
+## 🤖 Règles Cursor (Structure Officielle - À la racine)
 
-| Document | Taille | Description |
-|----------|--------|-------------|
-| **.cursorrules** | 10 KB | Règles principales Cursor (auto-lu) ⭐ |
-| **.cursor/agent.md** | 30 KB | Guide complet pour l'agent IA ⭐ |
-| **.cursor/conventions.md** | 25 KB | Conventions de code détaillées |
-| **.cursor/workflow.md** | 20 KB | Workflow de développement complet |
-| **.cursor/README.md** | 12 KB | Navigation des règles Cursor |
+| Document | Emplacement | Taille | Description |
+|----------|-------------|--------|-------------|
+| **.cursorrules** | Racine workspace | 2 KB | Règles principales (auto-lu) ⭐ |
+| **.cursor/rules/core.mdc** | Racine workspace | 5 KB | Règles fondamentales |
+| **.cursor/rules/typescript.mdc** | Racine workspace | 4 KB | Conventions TypeScript |
+| **.cursor/rules/react.mdc** | Racine workspace | 4 KB | Conventions React |
+| **.cursor/rules/style.mdc** | Racine workspace | 3 KB | Conventions Tailwind |
+| **.cursor/rules/logs.mdc** | Racine workspace | 2 KB | Logs structurés |
+| **AGENTS.md** | `inventory-app/` | 4 KB | Instructions agent IA ⭐ |
 
-**Total règles Cursor : 5 fichiers, ~97 KB** ✨ NEW
+**Total : 7 fichiers, ~24 KB** ✨ Format .mdc avec frontmatter YAML
+
+**Note** : Les fichiers `.cursor/` et `.cursorrules` sont à la **racine du workspace** (`/Users/anthony/Cursor/Inventor AI/`), pas dans `inventory-app/`.
 
 ### 📁 docs/
 
-| Document | Description |
-|----------|-------------|
-| **APPLICATION_DOCUMENTATION.md** | Documentation complète de l'application |
-| **ARCHITECTURE_GUIDE.md** | Guide d'architecture (97 KB, 1,183 lignes) |
-| **DEBUGGING_GUIDE.md** | Guide de debugging (159 KB, 1,022 lignes) |
-| **DEVELOPMENT_PROCESSES.md** | Processus de développement obligatoires |
-| **DEPLOYMENT.md** | Guide de déploiement |
-| **MONITORING.md** | Monitoring et logs |
-| **PHASE2_AI_INTEGRATION.md** | Plan Phase 2 (IA) |
-| **PRODUCT_FIELD_TEMPLATE.md** | Template champs produits |
-| **QUICK_START.md** | Démarrage rapide |
-| **SIMPLIFIED_DEVELOPMENT.md** | Développement simplifié |
-| **database-setup.sql** | Script création BDD |
-| **database-migration-pieces.sql** | Migration pièces |
-| **database-migration-stock.sql** | Migration stock |
+| Document | Taille | Description |
+|----------|--------|-------------|
+| **README.md** | 1 KB | Index de la documentation ⭐ NEW |
+| **ARCHITECTURE_GUIDE.md** | 97 KB | Guide d'architecture complet |
+| **DEBUGGING_GUIDE.md** | 159 KB | Guide de debugging complet |
+| **APPLICATION_DOCUMENTATION.md** | 45 KB | Documentation de l'application |
+| **DEPLOYMENT.md** | 12 KB | Guide de déploiement |
+| **MONITORING.md** | 8 KB | Monitoring et logs |
+| **QUICK_START.md** | 18 KB | Démarrage rapide |
+| **PHASE2_AI_INTEGRATION.md** | 15 KB | Plan Phase 2 (IA) |
+| **PRODUCT_FIELD_TEMPLATE.md** | 10 KB | Template champs produits |
+| **database-setup.sql** | 15 KB | Script création BDD ⭐ |
+| **database-migration-pieces.sql** | 5 KB | Migration pièces |
+| **database-migration-stock.sql** | 8 KB | Migration stock |
 
-**Total : 12 fichiers dans docs/**
+**Total : 10 fichiers + 3 SQL dans docs/** (4 doublons supprimés)
 
 ### 🛠️ Outils et scripts
 
@@ -140,11 +143,12 @@ Bienvenue dans la documentation complète de l'Inventory Manager. Cette page vou
 
 ### Besoin : "Je suis un agent IA"
 
-1. 🤖 [.cursor/agent.md](.cursor/agent.md) - Guide complet agent IA ⭐ NEW
-2. 🏗️ [docs/ARCHITECTURE_GUIDE.md](docs/ARCHITECTURE_GUIDE.md) - Contexte complet
-3. 📖 [docs/APPLICATION_DOCUMENTATION.md](docs/APPLICATION_DOCUMENTATION.md) - Fonctionnalités
-4. 🔧 [docs/DEBUGGING_GUIDE.md](docs/DEBUGGING_GUIDE.md) - Outils de debugging
-5. 🚨 [PROBLEMES_CORRIGES.md](PROBLEMES_CORRIGES.md) - Problèmes connus
+1. 🤖 [AGENTS.md](AGENTS.md) - Instructions pour l'agent ⭐ NEW
+2. 🤖 Règles `.cursor/rules/*.mdc` (à la racine workspace) ⭐ NEW
+3. 🏗️ [docs/ARCHITECTURE_GUIDE.md](docs/ARCHITECTURE_GUIDE.md) - Contexte complet
+4. 📖 [docs/APPLICATION_DOCUMENTATION.md](docs/APPLICATION_DOCUMENTATION.md) - Fonctionnalités
+5. 🔧 [docs/DEBUGGING_GUIDE.md](docs/DEBUGGING_GUIDE.md) - Outils de debugging
+6. 🚨 [PROBLEMES_CORRIGES.md](PROBLEMES_CORRIGES.md) - Problèmes connus
 
 ### Besoin : "J'ai un bug"
 
@@ -156,14 +160,14 @@ Bienvenue dans la documentation complète de l'Inventory Manager. Cette page vou
 ### Besoin : "Je veux ajouter une feature"
 
 1. 🏗️ [docs/ARCHITECTURE_GUIDE.md](docs/ARCHITECTURE_GUIDE.md) - Structure existante
-2. 📝 [docs/DEVELOPMENT_PROCESSES.md](docs/DEVELOPMENT_PROCESSES.md) - Workflow
+2. 🤖 [AGENTS.md](AGENTS.md) - Workflow obligatoire
 3. 📖 [README_DEVELOPERS.md](README_DEVELOPERS.md) - Scripts et conventions
 4. 🧪 **Lancez :** `./test-app.sh` (avant et après)
 
 ### Besoin : "Je veux déployer"
 
-1. 📝 [docs/DEVELOPMENT_PROCESSES.md](docs/DEVELOPMENT_PROCESSES.md) - Processus de déploiement
-2. 🚀 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) - Guide de déploiement
+1. 🤖 [AGENTS.md](AGENTS.md) - Processus de déploiement (workflow en 6 étapes)
+2. 🚀 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) - Guide de déploiement technique
 3. 📊 [docs/MONITORING.md](docs/MONITORING.md) - Surveillance post-déploiement
 4. 🔖 **Mettez à jour :** Version avec `npm run version:patch`
 
@@ -178,7 +182,7 @@ Bienvenue dans la documentation complète de l'Inventory Manager. Cette page vou
 | **Architecture** | [docs/ARCHITECTURE_GUIDE.md](docs/ARCHITECTURE_GUIDE.md) |
 | **Debugging** | [docs/DEBUGGING_GUIDE.md](docs/DEBUGGING_GUIDE.md) |
 | **Développement** | [README_DEVELOPERS.md](README_DEVELOPERS.md) |
-| **Processus** | [docs/DEVELOPMENT_PROCESSES.md](docs/DEVELOPMENT_PROCESSES.md) |
+| **Processus & Règles** | [AGENTS.md](AGENTS.md) + `.cursor/rules/*.mdc` |
 | **Déploiement** | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) |
 | **Base de données** | [docs/ARCHITECTURE_GUIDE.md](docs/ARCHITECTURE_GUIDE.md#base-de-données) |
 | **Bugs connus** | [PROBLEMES_CORRIGES.md](PROBLEMES_CORRIGES.md) |
@@ -296,13 +300,13 @@ node monitor-realtime-console.js    # Monitoring temps réel
 1. 🥇 **[README_DEVELOPERS.md](README_DEVELOPERS.md)** - Guide de démarrage
 2. 🥈 **[docs/DEBUGGING_GUIDE.md](docs/DEBUGGING_GUIDE.md)** - Debugging quotidien
 3. 🥉 **[docs/ARCHITECTURE_GUIDE.md](docs/ARCHITECTURE_GUIDE.md)** - Comprendre l'app
-4. 🏅 **[docs/DEVELOPMENT_PROCESSES.md](docs/DEVELOPMENT_PROCESSES.md)** - Processus
+4. 🏅 **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Déploiement
 5. 🎖️ **[PROBLEMES_CORRIGES.md](PROBLEMES_CORRIGES.md)** - Bugs connus
 
 ### Top 5 pour les agents IA
 
-1. 🤖 **[.cursor/agent.md](.cursor/agent.md)** - Guide complet agent IA ⭐ NEW
-2. 🤖 **[.cursor/workflow.md](.cursor/workflow.md)** - Workflow de développement ⭐ NEW
+1. 🤖 **[AGENTS.md](AGENTS.md)** - Instructions agent IA ⭐ NEW
+2. 🤖 **Règles `.cursor/rules/*.mdc`** (racine workspace) ⭐ NEW
 3. 🤖 **[docs/ARCHITECTURE_GUIDE.md](docs/ARCHITECTURE_GUIDE.md)** - Contexte complet
 4. 🤖 **[docs/DEBUGGING_GUIDE.md](docs/DEBUGGING_GUIDE.md)** - Outils de debugging
 5. 🤖 **[SYNTHESE_RESTRUCTURATION.md](SYNTHESE_RESTRUCTURATION.md)** - État actuel
@@ -324,26 +328,19 @@ inventory-app/
 ├── 📄 VERCEL_SETUP.md                    # Configuration Vercel
 ├── 📄 CURSOR_RULES_SETUP.md              # Configuration Cursor ⭐ NEW
 │
-├── 📄 .cursorrules                       # Règles Cursor principales ⭐ NEW
+├── 📄 AGENTS.md                          # Instructions agent IA ⭐ NEW
 │
-├── 📁 .cursor/                           # Règles Cursor détaillées ⭐ NEW
-│   ├── 📄 agent.md                       # Guide complet agent IA (30 KB)
-│   ├── 📄 conventions.md                 # Conventions de code (25 KB)
-│   ├── 📄 workflow.md                    # Workflow développement (20 KB)
-│   └── 📄 README.md                      # Navigation règles Cursor
-│
-├── 📁 docs/                              # Documentation détaillée
-│   ├── 📄 DEBUGGING_GUIDE.md             # Guide debugging ⭐ (159 KB)
+├── 📁 docs/                              # Documentation technique
+│   ├── 📄 README.md                      # Index documentation ⭐ NEW
 │   ├── 📄 ARCHITECTURE_GUIDE.md          # Guide architecture ⭐ (97 KB)
+│   ├── 📄 DEBUGGING_GUIDE.md             # Guide debugging ⭐ (159 KB)
 │   ├── 📄 APPLICATION_DOCUMENTATION.md   # Doc application complète
-│   ├── 📄 DEVELOPMENT_PROCESSES.md       # Processus développement ⭐
 │   ├── 📄 DEPLOYMENT.md                  # Guide déploiement
 │   ├── 📄 MONITORING.md                  # Monitoring et logs
-│   ├── 📄 PHASE2_AI_INTEGRATION.md       # Plan Phase 2
-│   ├── 📄 PRODUCT_FIELD_TEMPLATE.md      # Template champs produits
 │   ├── 📄 QUICK_START.md                 # Démarrage rapide
-│   ├── 📄 SIMPLIFIED_DEVELOPMENT.md      # Développement simplifié
-│   ├── 📄 database-setup.sql             # Script création BDD
+│   ├── 📄 PHASE2_AI_INTEGRATION.md       # Plan Phase 2 (IA)
+│   ├── 📄 PRODUCT_FIELD_TEMPLATE.md      # Template champs produits
+│   ├── 📄 database-setup.sql             # Script création BDD ⭐
 │   ├── 📄 database-migration-pieces.sql  # Migration pièces
 │   └── 📄 database-migration-stock.sql   # Migration stock
 │
@@ -427,12 +424,14 @@ graph TD
 
 Vous avez maintenant accès à l'une des documentations les plus complètes pour une application Inventory Manager :
 
-- 📚 **27 fichiers** de documentation (21 + 5 règles Cursor + CURSOR_RULES_SETUP.md)
-- 🤖 **5 fichiers** de règles Cursor (~97 KB) ✨ NEW
+- 📚 **20 fichiers** de documentation (4 doublons supprimés)
+- 🤖 **7 fichiers** de règles Cursor (~24 KB, format .mdc à la racine workspace) ✨
 - 🛠️ **3 outils** professionnels
-- 📊 **~517 KB** de contenu (~420 KB + 97 KB règles Cursor)
-- 📝 **~8,000 lignes** de documentation
+- 📊 **~400 KB** de contenu (documentation technique uniquement)
+- 📝 **~6,500 lignes** de documentation
 - ✅ **100%** de couverture
+- ✅ **Aucun doublon** entre rules Cursor et docs
+- ✅ **Structure optimale** et maintenue propre
 
 **Tout est en place pour développer efficacement avec assistance IA optimale ! 🚀**
 
