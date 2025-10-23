@@ -60,28 +60,30 @@ export const ProductService = {
 
   // Mettre à jour un produit
   async update(id: string, updates: Partial<Product>): Promise<Product | null> {
-    console.log('📝 [ProductService.update] Données reçues:', updates);
+    console.log('📝 [ProductService.update] Mise à jour produit:', id);
+    
+    // ⚠️ IMPORTANT : Supprimer barcode si vide pour éviter la contrainte unique
+    const cleanUpdates = { ...updates };
+    if (cleanUpdates.barcode === '' || cleanUpdates.barcode === null) {
+      delete cleanUpdates.barcode;
+      console.log('⚠️ [ProductService.update] Barcode vide retiré pour éviter conflit');
+    }
     
     const { data, error } = await supabase
       .from('products')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update({ ...cleanUpdates, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single();
 
     if (error) {
-      console.error('❌ [ProductService.update] Erreur Supabase:');
-      console.error('❌ Message:', error.message);
-      console.error('❌ Code:', error.code);
-      console.error('❌ Détails:', error.details);
-      console.error('❌ Hint:', error.hint);
-      console.error('❌ Données envoyées:', updates);
+      console.error('❌ [ProductService.update] Erreur Supabase:', error.message, error.code);
       return null;
     }
 
     await this.addHistory(id, 'updated', null, 'Produit mis à jour');
 
-    console.log('✅ [ProductService.update] Produit mis à jour:', data);
+    console.log('✅ [ProductService.update] Produit mis à jour avec succès');
     return data;
   },
 

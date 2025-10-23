@@ -577,7 +577,7 @@ export default function ProductInspector({
     };
     
     try {
-      console.log('📤 [ProductInspector] Envoi des données:', cleanedData);
+      console.log('📤 [ProductInspector] Envoi des données à onSubmit');
       await onSubmit(cleanedData);
       console.log('✅ [ProductInspector] Produit sauvegardé avec succès');
     } catch (error) {

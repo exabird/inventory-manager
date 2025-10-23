@@ -77,8 +77,6 @@ export default function Home() {
     
     try {
       console.log('💾 [page.tsx] Début handleUpdateProduct');
-      console.log('💾 [page.tsx] Données reçues:', data);
-      console.log('💾 [page.tsx] selectedProduct.id:', selectedProduct.id);
       
       // Mettre à jour le produit dans Supabase
       const updatedProduct = await ProductService.update(selectedProduct.id, data);
