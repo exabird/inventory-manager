@@ -300,57 +300,63 @@ export default function ProductInspector({
   };
 
   const handleBarcodeScanned = async (scannedBarcode: string) => {
-    console.log('📱 [ProductInspector] Code-barres reçu du scanner:', scannedBarcode);
-    console.log('📱 [ProductInspector] Type:', typeof scannedBarcode);
-    console.log('📱 [ProductInspector] Longueur:', scannedBarcode?.length);
-    
-    // Vérifier que le code n'est pas vide
-    if (!scannedBarcode || scannedBarcode.trim() === '') {
-      console.error('❌ [ProductInspector] Code-barres vide reçu !');
-      setShowScanner(false);
-      return;
-    }
-    
-    // Mettre à jour le code-barres immédiatement
-    console.log('📝 [ProductInspector] Mise à jour du formData avec le code:', scannedBarcode);
-    setFormData(prev => {
-      const newData = {
-        ...prev,
-        barcode: scannedBarcode
-      };
-      console.log('✅ [ProductInspector] FormData mis à jour:', newData.barcode);
-      return newData;
-    });
-    
-    // Fermer le scanner
-    console.log('🔒 [ProductInspector] Fermeture du scanner');
-    setShowScanner(false);
-    
-    // Détection automatique des informations produit
     try {
-      console.log('🔍 [ProductInspector] Détection automatique des infos produit...');
-      const detectedInfo = await ProductDetectionService.detectProductInfo(scannedBarcode);
-      const validatedInfo = ProductDetectionService.validateDetectedData(detectedInfo);
+      console.log('📱 [ProductInspector] Code-barres reçu du scanner:', scannedBarcode);
+      console.log('📱 [ProductInspector] Type:', typeof scannedBarcode);
+      console.log('📱 [ProductInspector] Longueur:', scannedBarcode?.length);
       
-      console.log('✅ [ProductInspector] Infos détectées:', validatedInfo);
+      // Vérifier que le code n'est pas vide
+      if (!scannedBarcode || scannedBarcode.trim() === '') {
+        console.error('❌ [ProductInspector] Code-barres vide reçu !');
+        setShowScanner(false);
+        return;
+      }
       
-      // Mettre à jour le formulaire avec les données détectées
-      setFormData(prev => ({
-        ...prev,
-        name: prev.name || validatedInfo.name || '',
-        brand: prev.brand || validatedInfo.brand || '',
-        manufacturer: prev.manufacturer || validatedInfo.manufacturer || '',
-        short_description: prev.short_description || validatedInfo.description || '',
-        selling_price_htva: prev.selling_price_htva || validatedInfo.price || null,
-        // Note: category_id nécessiterait une correspondance avec les catégories existantes
-      }));
+      // Fermer le scanner d'abord
+      console.log('🔒 [ProductInspector] Fermeture du scanner');
+      setShowScanner(false);
       
-      console.log('🎉 [ProductInspector] Informations produit automatiquement détectées et remplies !');
+      // Mettre à jour le code-barres immédiatement
+      console.log('📝 [ProductInspector] Mise à jour du formData avec le code:', scannedBarcode);
+      setFormData(prev => {
+        const newData = {
+          ...prev,
+          barcode: scannedBarcode
+        };
+        console.log('✅ [ProductInspector] FormData mis à jour:', newData.barcode);
+        return newData;
+      });
+      
+      // Détection automatique des informations produit (optionnel)
+      try {
+        console.log('🔍 [ProductInspector] Détection automatique des infos produit...');
+        const detectedInfo = await ProductDetectionService.detectProductInfo(scannedBarcode);
+        const validatedInfo = ProductDetectionService.validateDetectedData(detectedInfo);
+        
+        console.log('✅ [ProductInspector] Infos détectées:', validatedInfo);
+        
+        // Mettre à jour le formulaire avec les données détectées
+        setFormData(prev => ({
+          ...prev,
+          name: prev.name || validatedInfo.name || '',
+          brand: prev.brand || validatedInfo.brand || '',
+          manufacturer: prev.manufacturer || validatedInfo.manufacturer || '',
+          short_description: prev.short_description || validatedInfo.description || '',
+          selling_price_htva: prev.selling_price_htva || validatedInfo.price || null,
+        }));
+        
+        console.log('🎉 [ProductInspector] Informations produit automatiquement détectées et remplies !');
+        
+      } catch (error) {
+        console.warn('⚠️ [ProductInspector] Erreur lors de la détection automatique:', error);
+        console.warn('⚠️ [ProductInspector] Le code-barres est quand même rempli');
+        // Le code-barres est quand même rempli, pas grave si la détection échoue
+      }
       
     } catch (error) {
-      console.warn('⚠️ [ProductInspector] Erreur lors de la détection automatique:', error);
-      console.warn('⚠️ [ProductInspector] Le code-barres est quand même rempli');
-      // Le code-barres est quand même rempli, mais pas les autres infos
+      console.error('❌ [ProductInspector] Erreur critique dans handleBarcodeScanned:', error);
+      // S'assurer que le scanner est fermé même en cas d'erreur
+      setShowScanner(false);
     }
   };
 
