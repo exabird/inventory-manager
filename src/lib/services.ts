@@ -60,6 +60,8 @@ export const ProductService = {
 
   // Mettre à jour un produit
   async update(id: string, updates: Partial<Product>): Promise<Product | null> {
+    console.log('📝 [ProductService.update] Données reçues:', updates);
+    
     const { data, error } = await supabase
       .from('products')
       .update({ ...updates, updated_at: new Date().toISOString() })
@@ -68,12 +70,18 @@ export const ProductService = {
       .single();
 
     if (error) {
-      console.warn('⚠️ Erreur lors de la mise à jour du produit:', error.message || error);
+      console.error('❌ [ProductService.update] Erreur Supabase:');
+      console.error('❌ Message:', error.message);
+      console.error('❌ Code:', error.code);
+      console.error('❌ Détails:', error.details);
+      console.error('❌ Hint:', error.hint);
+      console.error('❌ Données envoyées:', updates);
       return null;
     }
 
     await this.addHistory(id, 'updated', null, 'Produit mis à jour');
 
+    console.log('✅ [ProductService.update] Produit mis à jour:', data);
     return data;
   },
 
