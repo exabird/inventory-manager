@@ -23,8 +23,9 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
   const [showCodeSelection, setShowCodeSelection] = useState(false);
   const [showCameraSelection, setShowCameraSelection] = useState(false);
   
-  // Générer un ID unique pour éviter les conflits
-  const scannerId = `scanner-${Math.random().toString(36).substr(2, 9)}`;
+  // Générer un ID unique CONSTANT pour éviter les conflits
+  const scannerIdRef = useRef(`scanner-${Math.random().toString(36).substr(2, 9)}`);
+  const scannerId = scannerIdRef.current;
 
   // Nettoyer le scanner au démontage du composant
   useEffect(() => {
@@ -84,9 +85,11 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
   };
 
   const stopScanning = async () => {
-    if (scannerRef.current?.isScanning) {
+    if (scannerRef.current) {
       try {
-        await scannerRef.current.stop();
+        if (scannerRef.current.isScanning) {
+          await scannerRef.current.stop();
+        }
         scannerRef.current.clear();
         setIsScanning(false);
       } catch (err) {
@@ -98,19 +101,53 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
   const startScanningWithCamera = async (cameraId: string) => {
     try {
       setError(null);
-      setIsScanning(true);
       setDetectedCodes([]);
+
+      // Arrêter et nettoyer le scanner existant
+      if (scannerRef.current) {
+        try {
+          if (scannerRef.current.isScanning) {
+            await scannerRef.current.stop();
+          }
+          scannerRef.current.clear();
+        } catch (err) {
+          console.warn('⚠️ Erreur lors du nettoyage du scanner existant:', err);
+        }
+      }
+
+      // Vérifier que l'élément DOM existe
+      const element = document.getElementById(scannerId);
+      if (!element) {
+        throw new Error(`Element scanner avec ID "${scannerId}" non trouvé dans le DOM`);
+      }
+
+      console.log('✅ Element scanner trouvé:', scannerId);
 
       const html5QrCode = new Html5Qrcode(scannerId);
       scannerRef.current = html5QrCode;
+      
+      setIsScanning(true);
+
+      const config = {
+        fps: 30,  // Augmenté pour meilleure détection
+        qrbox: function(viewfinderWidth: number, viewfinderHeight: number) {
+          // Zone de scan adaptative
+          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+          const qrboxSize = Math.floor(minEdge * 0.7);
+          return {
+            width: qrboxSize,
+            height: qrboxSize
+          };
+        },
+        aspectRatio: 1.777778,  // 16:9
+        disableFlip: false,
+      };
+
+      console.log('🔄 Démarrage du scanner avec caméra:', cameraId);
 
       await html5QrCode.start(
         cameraId,
-        {
-          fps: 10,
-          qrbox: { width: 300, height: 300 },
-          aspectRatio: 1.0,
-        },
+        config,
         (decodedText) => {
           try {
             console.log('Code détecté:', decodedText);
@@ -159,25 +196,79 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
         }
       );
     } catch (err: unknown) {
-      console.error('Error starting scanner:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
-      setError(`Erreur lors du démarrage du scanner: ${errorMessage}`);
+      console.error('❌ Erreur starting scanner:', err);
+      console.error('❌ Type:', typeof err);
+      console.error('❌ Détails:', err);
+      
+      let errorMessage = 'Erreur inconnue';
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+        console.error('❌ Message:', err.message);
+        console.error('❌ Stack:', err.stack);
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err && typeof err === 'object' && 'message' in err) {
+        errorMessage = String((err as any).message);
+      }
+      
+      // Messages d'erreur plus clairs
+      if (errorMessage.includes('NotAllowedError') || errorMessage.includes('Permission denied')) {
+        errorMessage = 'Accès à la caméra refusé. Veuillez autoriser l\'accès à la caméra dans les paramètres de votre navigateur.';
+      } else if (errorMessage.includes('NotFoundError') || errorMessage.includes('not found')) {
+        errorMessage = 'Aucune caméra trouvée sur votre appareil.';
+      } else if (errorMessage.includes('NotReadableError')) {
+        errorMessage = 'La caméra est déjà utilisée par une autre application.';
+      }
+      
+      setError(`Erreur : ${errorMessage}`);
       setIsScanning(false);
       setShowManualInput(true);
     }
   };
 
   useEffect(() => {
-    // Démarrer automatiquement le scan avec la meilleure caméra
+    let isMounted = true;
+    
+    // Attendre que le composant soit complètement monté
     const initializeScanner = async () => {
       try {
+        // Attendre un court instant que React finisse de rendre
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        if (!isMounted) return;
+        
+        // Vérifier que l'élément existe
+        const element = document.getElementById(scannerId);
+        
+        if (!element) {
+          console.error('❌ Element DOM non trouvé:', scannerId);
+          console.error('❌ Éléments dans le DOM:', document.querySelectorAll('[id^="scanner-"]'));
+          setError('Erreur d\'initialisation du scanner. Veuillez réessayer.');
+          setShowManualInput(true);
+          return;
+        }
+        
+        console.log('✅ Element DOM trouvé:', scannerId, element);
+        
+        // Vérifier si un scanner existe déjà pour éviter les doublons
+        if (scannerRef.current) {
+          console.log('⚠️ Scanner déjà initialisé, nettoyage...');
+          try {
+            await scannerRef.current.stop();
+            scannerRef.current.clear();
+          } catch (err) {
+            console.warn('Erreur lors du nettoyage du scanner:', err);
+          }
+        }
+        
         const devices = await Html5Qrcode.getCameras();
         
         if (devices && devices.length) {
           setCameras(devices);
           
           // Debug: Afficher toutes les caméras disponibles
-          console.log('Caméras disponibles:', devices.map(d => d.label));
+          console.log('📷 Caméras disponibles:', devices.map(d => d.label));
           
           // Priorité 1: Caméra ultra grand angle arrière (différentes variantes)
           const ultraWideBackCamera = devices.find((device) => {
@@ -210,28 +301,27 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
           
           // Debug: Afficher la caméra sélectionnée
           const selectedCameraLabel = devices.find(d => d.id === bestCamera)?.label;
-          console.log('Caméra sélectionnée:', selectedCameraLabel);
+          console.log('📷 Caméra sélectionnée:', selectedCameraLabel);
           
           setSelectedCamera(bestCamera);
           
-          // Démarrer automatiquement le scan
-          setTimeout(() => {
-            startScanningWithCamera(bestCamera);
-          }, 500);
+          // Démarrer le scanner immédiatement
+          console.log('🚀 Lancement du scanner...');
+          await startScanningWithCamera(bestCamera);
           
         } else {
           setError('Aucune caméra détectée sur votre appareil.');
           setShowManualInput(true);
         }
       } catch (err) {
-        console.error('Error getting cameras:', err);
+        console.error('❌ Error getting cameras:', err);
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
         const isChrome = /CriOS/.test(navigator.userAgent);
         
         if (isIOS && isChrome) {
           setError('⚠️ Chrome sur iOS ne supporte pas la caméra. Utilisez Safari ou entrez le code manuellement.');
         } else {
-          setError('Impossible d&apos;accéder à la caméra. Vous pouvez entrer le code manuellement.');
+          setError('Impossible d\'accéder à la caméra. Vous pouvez entrer le code manuellement.');
         }
         setShowManualInput(true);
       }
@@ -240,11 +330,17 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
     initializeScanner();
 
     return () => {
+      isMounted = false;
       // Nettoyer le scanner lors du démontage
-      if (scannerRef.current?.isScanning) {
-        scannerRef.current.stop().catch(console.error);
+      if (scannerRef.current) {
+        if (scannerRef.current.isScanning) {
+          scannerRef.current.stop().catch(console.error);
+        }
+        scannerRef.current.clear();
+        scannerRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const startScanning = async () => {
@@ -304,15 +400,18 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       {/* Zone de scan */}
       <div className="flex flex-col items-center justify-center h-full">
         {error && (
-          <Alert variant="destructive" className="mx-4 mb-4">
-            <AlertDescription>{error}</AlertDescription>
+          <Alert variant="destructive" className="mx-4 mb-4 max-w-md">
+            <AlertDescription className="text-sm">{error}</AlertDescription>
           </Alert>
         )}
 
-        <div
-          id={scannerId}
-          className={`w-full max-w-md ${isScanning ? '' : 'hidden'}`}
-        ></div>
+        {/* Element du scanner - TOUJOURS visible dans le DOM */}
+        <div className="w-full max-w-md">
+          <div
+            id={scannerId}
+            style={{ width: '100%', maxWidth: '500px' }}
+          ></div>
+        </div>
 
         {/* Boutons de contrôle dans la vue de scan */}
         {isScanning && (

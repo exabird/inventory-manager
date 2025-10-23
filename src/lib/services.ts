@@ -11,7 +11,7 @@ export const ProductService = {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('❌ Error fetching products:', error);
+      console.warn('⚠️ Erreur lors du chargement des produits:', error);
       return [];
     }
 
@@ -29,7 +29,7 @@ export const ProductService = {
       .single();
 
     if (error) {
-      console.error('Error fetching product:', error);
+      console.warn('⚠️ Erreur lors du chargement du produit:', error);
       return null;
     }
 
@@ -46,7 +46,7 @@ export const ProductService = {
       .single();
 
     if (error) {
-      console.error('❌ Error creating product:', error);
+      console.warn('⚠️ Erreur lors de la création du produit:', error);
       return null;
     }
 
@@ -68,7 +68,7 @@ export const ProductService = {
       .single();
 
     if (error) {
-      console.error('Error updating product:', error.message || error);
+      console.warn('⚠️ Erreur lors de la mise à jour du produit:', error.message || error);
       return null;
     }
 
@@ -86,7 +86,7 @@ export const ProductService = {
       .single();
 
     if (fetchError || !product) {
-      console.error('Error fetching product for quantity update:', fetchError);
+      console.warn('⚠️ Erreur lors du chargement du produit pour mise à jour quantité:', fetchError);
       return false;
     }
 
@@ -101,7 +101,7 @@ export const ProductService = {
       .eq('id', id);
 
     if (error) {
-      console.error('Error updating quantity:', error);
+      console.warn('⚠️ Erreur lors de la mise à jour de la quantité:', error);
       return false;
     }
 
@@ -125,7 +125,7 @@ export const ProductService = {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting product:', error);
+      console.warn('⚠️ Erreur lors de la suppression du produit:', error);
       return false;
     }
 
@@ -141,7 +141,7 @@ export const ProductService = {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error searching products:', error);
+      console.warn('⚠️ Erreur lors de la recherche de produits:', error);
       return [];
     }
 
@@ -176,7 +176,7 @@ export const CategoryService = {
       .order('name', { ascending: true });
 
     if (error) {
-      console.error('Error fetching categories:', error);
+      console.warn('⚠️ Erreur lors du chargement des catégories:', error);
       return [];
     }
 
@@ -192,7 +192,7 @@ export const CategoryService = {
       .single();
 
     if (error) {
-      console.error('Error creating category:', error);
+      console.warn('⚠️ Erreur lors de la création de catégorie:', error);
       return null;
     }
 

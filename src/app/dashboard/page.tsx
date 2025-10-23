@@ -54,7 +54,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground mt-2">
-            Vue d'ensemble de votre inventaire
+            Vue d&apos;ensemble de votre inventaire
           </p>
         </div>
 

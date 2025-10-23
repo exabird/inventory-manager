@@ -171,7 +171,7 @@ export default function StockTab({ product, onStockUpdate }: StockTabProps) {
         const testReasons = await StockService.getReasons('add');
         console.log('✅ Test réussi - Raisons add:', testReasons?.length || 0);
       } catch (error) {
-        console.error('❌ Test échoué:', error);
+        console.warn('⚠️ Test échoué:', error);
       }
     };
     testService();
@@ -183,7 +183,7 @@ export default function StockTab({ product, onStockUpdate }: StockTabProps) {
       const stockOperations = await StockService.getOperationsByProduct(product.id);
       setOperations(stockOperations);
     } catch (error) {
-      console.error('Erreur lors du chargement des opérations:', error);
+      console.warn('⚠️ Erreur lors du chargement des opérations:', error);
     } finally {
       setIsLoading(false);
     }
@@ -206,7 +206,7 @@ export default function StockTab({ product, onStockUpdate }: StockTabProps) {
         setOperationReasons([]);
       }
     } catch (error) {
-      console.error('❌ Erreur lors du chargement des raisons:', error);
+      console.warn('⚠️ Erreur lors du chargement des raisons:', error);
       setOperationReasons([]);
       throw error; // Re-lancer l'erreur pour que nextStep puisse la gérer
     } finally {
@@ -218,7 +218,7 @@ export default function StockTab({ product, onStockUpdate }: StockTabProps) {
     try {
       await StockService.updateMinStockSettings(product.id, minStockRequired, minStockQuantity);
     } catch (error) {
-      console.error('Erreur lors de la mise à jour des paramètres:', error);
+      console.warn('⚠️ Erreur lors de la mise à jour des paramètres:', error);
     }
   };
 
@@ -294,7 +294,7 @@ export default function StockTab({ product, onStockUpdate }: StockTabProps) {
       closeWizard();
       
     } catch (error: any) {
-      console.error('❌ Erreur lors de l\'opération:', error);
+      console.warn('⚠️ Erreur lors de l\'opération:', error);
       const errorMessage = error?.message || 'Erreur lors de l\'opération de stock';
       alert(`Erreur: ${errorMessage}`);
     } finally {
@@ -384,7 +384,7 @@ export default function StockTab({ product, onStockUpdate }: StockTabProps) {
                           await loadReasons(option.id as 'add' | 'remove' | 'set');
                           setWizardStep(1); // Passer à l'étape suivante seulement après chargement
                         } catch (error) {
-                          console.error('❌ Erreur lors du chargement des raisons:', error);
+                          console.warn('⚠️ Erreur lors du chargement des raisons:', error);
                         }
                       }}
                       className={`p-4 md:p-4 rounded-lg border-2 ${option.borderColor} ${option.bgColor} ${option.hoverColor} transition-colors text-left`}

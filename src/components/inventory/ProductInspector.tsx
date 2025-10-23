@@ -173,7 +173,7 @@ export default function ProductInspector({
         const cats = await CategoryService.getAll();
         setCategories(cats);
       } catch (error) {
-        console.error('Erreur lors du chargement des catégories:', error);
+        console.warn('⚠️ Erreur lors du chargement des catégories:', error);
         setCategories([]);
       } finally {
         setIsLoadingCategories(false);
@@ -333,7 +333,7 @@ export default function ProductInspector({
       console.log('🎉 Informations produit automatiquement détectées et remplies !');
       
     } catch (error) {
-      console.error('❌ Erreur lors de la détection automatique:', error);
+      console.warn('⚠️ Erreur lors de la détection automatique:', error);
       // Le code-barres est quand même rempli, mais pas les autres infos
     }
   };
@@ -351,9 +351,10 @@ export default function ProductInspector({
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
     
-    if (!formData.internal_ref || formData.internal_ref.trim() === '') {
-      errors.internal_ref = 'La référence interne est requise';
-    }
+    // La référence interne n'est plus obligatoire - sera générée automatiquement si vide
+    // if (!formData.internal_ref || formData.internal_ref.trim() === '') {
+    //   errors.internal_ref = 'La référence interne est requise';
+    // }
     
     if (!formData.name || formData.name.trim() === '') {
       errors.name = 'Le nom du produit est requis';
@@ -416,7 +417,7 @@ export default function ProductInspector({
     try {
       await onSubmit(cleanedData);
     } catch (error) {
-      console.error('Erreur lors de la soumission:', error);
+      console.warn('⚠️ Erreur lors de la soumission:', error);
     }
   };
 
@@ -523,11 +524,11 @@ export default function ProductInspector({
                   {/* Référence interne */}
                   <FunctionalInput
                     id="internal_ref"
-                    label="Référence interne *"
+                    label="Référence interne"
                     value={formData.internal_ref || ''}
                     onChange={(e) => handleInputChange('internal_ref', e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="REF-INT-001"
+                    placeholder="REF-INT-001 (optionnel)"
                     status={getFieldStatus('internal_ref')}
                     error={validationErrors.internal_ref}
                   />
@@ -1136,27 +1137,10 @@ export default function ProductInspector({
 
       {/* Scanner de code-barres */}
       {showScanner && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Scanner Code-barres</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowScanner(false)}
-                className="h-8 w-8 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="relative">
-              <BarcodeScanner
-                onScanSuccess={handleBarcodeScanned}
-                onClose={() => setShowScanner(false)}
-              />
-            </div>
-          </div>
-        </div>
+        <BarcodeScanner
+          onScanSuccess={handleBarcodeScanned}
+          onClose={() => setShowScanner(false)}
+        />
       )}
     </>
   );

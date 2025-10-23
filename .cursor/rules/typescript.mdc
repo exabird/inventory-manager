@@ -1,0 +1,174 @@
+---
+description: "Conventions TypeScript strictes - typage, null/undefined, interfaces"
+globs: "*.ts,*.tsx"
+alwaysApply: true
+---
+
+# Conventions TypeScript
+
+## Typage Strict OBLIGATOIRE
+
+### Toujours typer explicitement
+
+<example>
+// ✅ BON : Types explicites
+interface ProductFormData {
+  name: string;
+  barcode: string | null;
+  quantity: number;
+}
+
+async function loadProducts(): Promise<Product[]> {
+  const data = await ProductService.getAll();
+  return data;
+}
+
+const handleEdit = (product: Product): void => {
+  console.log('Édition de', product.name);
+};
+</example>
+
+<example type="invalid">
+// ❌ MAUVAIS : Types implicites ou any
+const handleSubmit = (data) => { }         // any implicite
+function processData(input: any) { }       // any explicite
+</example>
+
+## Null vs Undefined
+
+### Null pour BDD, Undefined pour UI
+
+<example>
+// ✅ Utiliser null pour les valeurs de BDD
+interface Product {
+  barcode: string | null;        // Peut être null en BDD
+  manufacturer: string | null;   // Peut être null en BDD
+  quantity: number;              // Jamais null (défaut: 0)
+}
+
+// ✅ Utiliser undefined pour valeurs optionnelles UI
+interface ComponentProps {
+  onClose?: () => void;          // Optionnel
+  title?: string;
+  className?: string;
+}
+
+// ✅ Gestion des valeurs nulles
+const displayName = product.manufacturer ?? 'Fabricant inconnu';
+const categoryName = product.categories?.name || 'Sans catégorie';
+</example>
+
+## Interfaces vs Types
+
+<example>
+// ✅ Préférer interfaces pour les objets
+interface Product {
+  id: string;
+  name: string;
+  quantity: number;
+}
+
+// ✅ Préférer types pour unions et alias
+type ProductStatus = 'active' | 'inactive' | 'discontinued';
+type ProductId = string;
+type ProductList = Product[];
+
+// ✅ Étendre les interfaces
+interface ExtendedProduct extends Product {
+  images: ProductImage[];
+  category: Category;
+}
+</example>
+
+## Nommage
+
+<example>
+// ✅ Variables : camelCase
+const productList = [];
+const isLoading = false;
+
+// ✅ Constantes : UPPER_SNAKE_CASE
+const MAX_PRODUCTS = 100;
+const API_BASE_URL = 'https://api.example.com';
+
+// ✅ Fonctions : camelCase avec verbe
+function loadProducts() { }
+async function fetchData() { }
+
+// ✅ Types/Interfaces : PascalCase
+interface Product { }
+type ProductStatus = 'active' | 'inactive';
+
+// ✅ Enums : PascalCase
+enum StockStatus {
+  InStock = 'in_stock',
+  LowStock = 'low_stock'
+}
+</example>
+
+## Gestion des Erreurs
+
+### Try-catch avec logs détaillés OBLIGATOIRE
+
+<example>
+// ✅ BON : Gestion complète avec logs structurés
+async function createProduct(data: ProductFormData): Promise<Product | null> {
+  try {
+    console.log('➕ [ProductService.create] Début création', data);
+    
+    if (!data.name || !data.internal_ref) {
+      throw new Error('Nom et référence interne obligatoires');
+    }
+    
+    const { data: product, error } = await supabase
+      .from('products')
+      .insert([data])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    console.log('✅ [ProductService.create] Produit créé:', product.id);
+    return product;
+    
+  } catch (error: any) {
+    console.error('❌ [ProductService.create] Erreur:', error.message);
+    return null;
+  }
+}
+</example>
+
+<example type="invalid">
+// ❌ MAUVAIS : Pas de gestion d'erreur
+async function createProduct(data: ProductFormData): Promise<Product> {
+  const { data: product } = await supabase.from('products').insert([data]);
+  return product;  // Peut crasher l'app
+}
+</example>
+
+## Validation avec Zod
+
+<example>
+// ✅ BON : Schéma de validation complet
+const productSchema = z.object({
+  name: z.string()
+    .min(1, 'Le nom est obligatoire')
+    .max(500, 'Max 500 caractères'),
+  internal_ref: z.string()
+    .min(1, 'La référence interne est obligatoire'),
+  barcode: z.string().nullable(),
+  quantity: z.number()
+    .int('La quantité doit être un entier')
+    .min(0, 'La quantité ne peut pas être négative')
+});
+
+// Validation
+try {
+  const validData = productSchema.parse(formData);
+  await ProductService.create(validData);
+} catch (error) {
+  if (error instanceof z.ZodError) {
+    console.error('❌ Validation échouée:', error.errors);
+  }
+}
+</example>

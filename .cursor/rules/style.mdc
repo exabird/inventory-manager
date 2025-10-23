@@ -1,0 +1,185 @@
+---
+description: "Conventions Tailwind CSS - ordre des classes, responsive, mobile-first"
+globs: "*.tsx,*.jsx"
+alwaysApply: true
+---
+
+# Conventions Tailwind CSS
+
+## Ordre des Classes
+
+### Layout → Spacing → Sizing → Typography → Visual → States
+
+<example>
+// ✅ BON : Ordre logique
+<div className="
+  flex items-center justify-between     // Layout
+  gap-4 p-4                            // Spacing
+  w-full h-12 min-h-[48px]            // Sizing
+  text-sm font-medium                  // Typography
+  bg-white border border-gray-200      // Visual
+  rounded-lg shadow-sm                 // Visual
+  hover:bg-gray-50 hover:shadow-md     // States
+  transition-all duration-200          // Animations
+">
+  {/* Contenu */}
+</div>
+</example>
+
+<example type="invalid">
+// ❌ MAUVAIS : Classes désordonnées
+<div className="
+  hover:bg-gray-50 text-sm bg-white flex p-4 rounded-lg w-full
+">
+</example>
+
+## Mobile-First OBLIGATOIRE
+
+### Classes de base pour mobile, puis breakpoints
+
+<example>
+// ✅ BON : Mobile-first approach
+<div className="
+  w-full p-4        // Mobile par défaut
+  md:w-1/2 md:p-6   // Tablette (768px+)
+  lg:w-1/3 lg:p-8   // Desktop (1024px+)
+">
+  {/* Contenu */}
+</div>
+
+// ✅ Grid responsive
+<div className="
+  grid grid-cols-1     // Mobile : 1 colonne
+  md:grid-cols-2       // Tablette : 2 colonnes
+  lg:grid-cols-3       // Desktop : 3 colonnes
+  gap-4
+">
+</example>
+
+<example type="invalid">
+// ❌ MAUVAIS : Desktop-first
+<div className="
+  w-1/3             // Desktop par défaut
+  md:w-1/2          // Tablette
+  sm:w-full         // Mobile
+">
+</example>
+
+## Fonction cn() pour Classes Conditionnelles
+
+### Toujours utiliser cn() de utils
+
+<example>
+import { cn } from '@/lib/utils';
+
+// ✅ BON : Utiliser cn() pour classes conditionnelles
+<Button
+  className={cn(
+    'base-classes',
+    isActive && 'active-classes',
+    isDisabled && 'disabled-classes',
+    className  // Props externes
+  )}
+>
+  Action
+</Button>
+</example>
+
+<example type="invalid">
+// ❌ MAUVAIS : Concaténation de strings
+<Button className={`base ${isActive ? 'active' : ''}`}>
+</example>
+
+## Variables CSS Shadcn
+
+### Utiliser les variables CSS du design system
+
+<example>
+// ✅ BON : Variables CSS Shadcn
+<div className="
+  bg-primary text-primary-foreground
+  border-border
+  text-foreground
+  bg-background
+">
+  {/* Contenu */}
+</div>
+
+// ✅ Variantes de couleurs
+bg-primary          // Couleur primaire
+bg-secondary        // Couleur secondaire
+bg-muted            // Couleur atténuée
+bg-destructive      // Couleur destructive
+</example>
+
+## Spacing Cohérent
+
+### Utiliser l'échelle de spacing Tailwind
+
+<example>
+// ✅ BON : Échelle cohérente (0.25rem par unité)
+gap-2    // 0.5rem = 8px
+gap-4    // 1rem = 16px
+gap-6    // 1.5rem = 24px
+gap-8    // 2rem = 32px
+
+p-2      // padding: 0.5rem
+p-4      // padding: 1rem
+p-6      // padding: 1.5rem
+p-8      // padding: 2rem
+</example>
+
+<example type="invalid">
+// ❌ MAUVAIS : Valeurs arbitraires sans raison
+gap-[13px]
+p-[17px]
+</example>
+
+## States et Interactions
+
+### Hover, focus, active, disabled
+
+<example>
+// ✅ BON : States complets
+<button className="
+  bg-primary text-white
+  hover:bg-primary/90
+  focus:ring-2 focus:ring-primary
+  active:scale-95
+  disabled:opacity-50 disabled:cursor-not-allowed
+  transition-all duration-200
+">
+  Action
+</button>
+</example>
+
+## Dark Mode (si applicable)
+
+<example>
+// ✅ Support du dark mode
+<div className="
+  bg-white dark:bg-gray-900
+  text-gray-900 dark:text-gray-100
+  border-gray-200 dark:border-gray-800
+">
+  {/* Contenu */}
+</div>
+</example>
+
+## Animations et Transitions
+
+<example>
+// ✅ Transitions fluides
+<div className="
+  transform
+  transition-all duration-300 ease-in-out
+  hover:scale-105 hover:shadow-lg
+">
+  {/* Contenu */}
+</div>
+
+// ✅ Animations Tailwind
+<div className="animate-spin">...</div>
+<div className="animate-pulse">...</div>
+<div className="animate-bounce">...</div>
+</example>

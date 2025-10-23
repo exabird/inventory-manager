@@ -58,27 +58,36 @@ export default function CompactProductListItem({
   };
 
   const getFieldValue = (fieldKey: string) => {
-    if (fieldKey.startsWith('metadata.')) {
-      const metadataKey = fieldKey.replace('metadata.', '');
-      return product.metadata?.[metadataKey] || '-';
+    try {
+      if (fieldKey.startsWith('metadata.')) {
+        const metadataKey = fieldKey.replace('metadata.', '');
+        const value = product.metadata?.[metadataKey];
+        return value !== null && value !== undefined ? String(value) : '-';
+      }
+      
+      const value = (product as any)[fieldKey];
+      if (value === null || value === undefined) return '-';
+      if (typeof value === 'object') return JSON.stringify(value);
+      return String(value);
+    } catch (error) {
+      return '-';
     }
-    return (product as any)[fieldKey] || '-';
   };
 
   const stockStatus = getStockStatus();
 
   return (
     <div 
-      className="hover:bg-gray-50 transition-colors cursor-pointer"
+      className="hover:bg-muted/50 transition-colors duration-150 cursor-pointer border-b border-border last:border-b-0"
       onClick={() => onSelect(product)}
     >
-      {/* Layout Mobile - Simple et efficace */}
+      {/* Layout Mobile - Shadcn sobre */}
       <div className="block md:hidden p-3">
         <div className="flex items-center gap-3">
           {/* Checkbox */}
           <input 
             type="checkbox" 
-            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
+            className="w-4 h-4 text-primary border-input rounded focus:ring-2 focus:ring-ring flex-shrink-0"
             onClick={(e) => e.stopPropagation()}
           />
 
@@ -87,55 +96,59 @@ export default function CompactProductListItem({
             <ProductThumbnail 
               productId={product.id} 
               size="sm" 
-              className="rounded border border-gray-200 w-10 h-10"
+              className="rounded-md border border-border w-12 h-12"
             />
           </div>
 
           {/* Informations produit */}
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-medium text-gray-900 truncate">
+            <h3 className="text-sm font-medium text-foreground truncate mb-1">
               {product.name}
             </h3>
-            <div className="flex items-center gap-2 mt-1">
-              <div className={`flex items-center gap-1 px-2 py-1 rounded-md ${stockStatus.bgColor}`}>
-                <Package className={`h-3 w-3 ${stockStatus.iconColor}`} />
-                <span className={`text-xs font-semibold ${stockStatus.color}`}>
-                  {product.quantity}
-                </span>
-              </div>
+            <div className="flex items-center gap-2">
+              <Badge 
+                variant={product.quantity === 0 ? "destructive" : product.quantity < 5 ? "outline" : "default"}
+                className="gap-1"
+              >
+                <Package className="h-3 w-3" />
+                {product.quantity}
+              </Badge>
+              {product.manufacturer_ref && (
+                <span className="text-xs text-muted-foreground truncate">#{product.manufacturer_ref}</span>
+              )}
             </div>
           </div>
 
           {/* Prix et bouton */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <div className="text-right">
-              <div className="text-sm font-semibold text-gray-900">
+              <div className="text-sm font-semibold text-foreground">
                 {product.selling_price_htva?.toFixed(0) || '0'}€
               </div>
             </div>
             <Button
-              size="sm"
+              size="icon"
               variant="ghost"
-              className="h-6 w-6 p-0 hover:bg-blue-50 hover:text-blue-600"
+              className="h-8 w-8"
               onClick={(e) => {
                 e.stopPropagation();
                 onStockEdit(product);
               }}
               title="Modifier le stock"
             >
-              <Edit3 className="h-3 w-3" />
+              <Edit3 className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Layout Desktop */}
-      <div className="hidden md:flex items-center gap-3 py-3 px-4 border-b border-gray-100 hover:bg-gray-50/50 transition-colors cursor-pointer group">
+      {/* Layout Desktop - Design Shadcn sobre */}
+      <div className="hidden md:flex items-center gap-3 py-3 px-4 transition-colors cursor-pointer group relative">
         {/* Checkbox */}
         <div className="flex-shrink-0 w-4">
           <input 
             type="checkbox" 
-            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            className="w-4 h-4 text-primary border-input rounded focus:ring-2 focus:ring-ring cursor-pointer"
             onClick={(e) => e.stopPropagation()}
           />
         </div>
@@ -145,115 +158,127 @@ export default function CompactProductListItem({
           <ProductThumbnail 
             productId={product.id} 
             size="sm" 
-            className="rounded border border-gray-200 w-12 h-12"
+            className="rounded-md border border-border w-12 h-12"
           />
         </div>
 
         {/* Nom du produit */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-medium text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+          <h3 className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
             {product.name}
           </h3>
         </div>
 
-        {/* Référence fabricant */}
+        {/* Référence fabricant - Shadcn sobre */}
         {columnVisibility.manufacturer_ref && (
           <div className="flex-shrink-0 w-24">
-            <div className="flex items-center gap-1">
-              <Hash className="h-3 w-3 text-gray-400" />
-              <span className="text-xs text-gray-500 truncate">
-                {product.manufacturer_ref || '-'}
-              </span>
-            </div>
+            <Badge variant="outline" className="font-mono text-xs">
+              <Hash className="h-3 w-3 mr-1 text-muted-foreground" />
+              {product.manufacturer_ref || '-'}
+            </Badge>
           </div>
         )}
 
-        {/* Catégorie */}
+        {/* Catégorie - Badge Shadcn */}
         {columnVisibility.category && (
           <div className="flex-shrink-0 w-32">
-            <div className="flex items-center gap-1">
-              <Tag className="h-3 w-3 text-gray-400" />
-              <span className="text-xs text-gray-500 truncate">
-                {product.categories?.name || '-'}
-              </span>
-            </div>
+            {product.categories?.name ? (
+              <Badge variant="secondary">
+                <Tag className="h-3 w-3 mr-1" />
+                {product.categories.name}
+              </Badge>
+            ) : (
+              <span className="text-xs text-muted-foreground">-</span>
+            )}
           </div>
         )}
 
-        {/* Marque */}
+        {/* Marque - Badge sobre */}
         {columnVisibility.brand && (
           <div className="flex-shrink-0 w-24">
-            <div className="flex items-center gap-1">
-              <Building2 className="h-3 w-3 text-gray-400" />
-              <span className="text-xs text-gray-500 truncate">
-                {product.brand || '-'}
-              </span>
-            </div>
+            {product.brand || product.manufacturer ? (
+              <Badge variant="outline" className="text-xs">
+                <Building2 className="h-3 w-3 mr-1" />
+                {product.brand || product.manufacturer}
+              </Badge>
+            ) : (
+              <span className="text-xs text-muted-foreground">-</span>
+            )}
           </div>
         )}
 
-        {/* Stock - Version améliorée avec icône et couleur */}
+        {/* Stock - Badge simple */}
         {columnVisibility.quantity && (
-          <div className="flex-shrink-0 w-16 text-center">
-            <div className={`flex items-center justify-center gap-1 px-2 py-1 rounded-md ${stockStatus.bgColor}`}>
-              <Package className={`h-3 w-3 ${stockStatus.iconColor}`} />
-              <span className={`text-sm font-semibold ${stockStatus.color}`}>
-                {product.quantity}
-              </span>
-            </div>
+          <div className="flex-shrink-0 w-20 text-center">
+            <Badge 
+              variant={product.quantity === 0 ? "destructive" : product.quantity < 5 ? "outline" : "default"}
+              className="gap-1"
+            >
+              <Package className="h-3 w-3" />
+              {product.quantity}
+            </Badge>
           </div>
         )}
 
-        {/* Prix de vente */}
+        {/* Prix de vente - Simple */}
         {columnVisibility.selling_price_htva && (
-          <div className="flex-shrink-0 w-20 text-center">
+          <div className="flex-shrink-0 w-24 text-right">
             {product.selling_price_htva ? (
-              <div className="flex items-center justify-center gap-1">
-                <ArrowUpFromLine className="h-3 w-3 text-gray-400" />
-                <span className="text-xs text-gray-500">
-                  {product.selling_price_htva.toFixed(2)}€
-                </span>
+              <div className="inline-flex items-center gap-1 text-sm font-medium text-foreground">
+                <ArrowUpFromLine className="h-3 w-3 text-muted-foreground" />
+                {product.selling_price_htva.toFixed(2)}€
               </div>
             ) : (
-              <span className="text-xs text-gray-400">-</span>
+              <span className="text-xs text-muted-foreground">-</span>
             )}
           </div>
         )}
 
-        {/* Prix d'achat */}
+        {/* Prix d'achat - Simple */}
         {columnVisibility.purchase_price_htva && (
-          <div className="flex-shrink-0 w-20 text-center">
+          <div className="flex-shrink-0 w-24 text-right">
             {product.purchase_price_htva ? (
-              <div className="flex items-center justify-center gap-1">
-                <ArrowDownToLine className="h-3 w-3 text-gray-400" />
-                <span className="text-xs text-gray-500">
-                  {product.purchase_price_htva.toFixed(2)}€
-                </span>
+              <div className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground">
+                <ArrowDownToLine className="h-3 w-3 text-muted-foreground" />
+                {product.purchase_price_htva.toFixed(2)}€
               </div>
             ) : (
-              <span className="text-xs text-gray-400">-</span>
+              <span className="text-xs text-muted-foreground">-</span>
             )}
           </div>
         )}
 
-        {/* Colonnes dynamiques */}
+        {/* Colonnes dynamiques - Shadcn sobre */}
         {Object.keys(columnVisibility)
-          .filter(key => !['manufacturer_ref', 'category', 'quantity', 'selling_price_htva', 'purchase_price_htva'].includes(key))
+          .filter(key => !['manufacturer_ref', 'category', 'quantity', 'selling_price_htva', 'purchase_price_htva', 'brand', 'warranty_period', 'min_stock_quantity'].includes(key))
           .filter(key => columnVisibility[key])
-          .map(fieldKey => (
-            <div key={fieldKey} className="flex-shrink-0 w-20 text-center">
-              <span className="text-xs text-gray-500 truncate">
-                {getFieldValue(fieldKey)}
-              </span>
-            </div>
-          ))}
+          .map(fieldKey => {
+            const value = getFieldValue(fieldKey);
+            const isMetadata = fieldKey.startsWith('metadata.');
+            
+            return (
+              <div key={fieldKey} className="flex-shrink-0 w-24 text-center">
+                {value !== '-' ? (
+                  <Badge 
+                    variant={isMetadata ? "secondary" : "outline"}
+                    className="text-xs truncate max-w-full"
+                    title={`${fieldKey}: ${value}`}
+                  >
+                    {value}
+                  </Badge>
+                ) : (
+                  <span className="text-xs text-muted-foreground">-</span>
+                )}
+              </div>
+            );
+          })}
 
-        {/* Bouton modification stock */}
+        {/* Bouton modification stock - Shadcn sobre */}
         <div className="flex-shrink-0">
           <Button
-            size="sm"
+            size="icon"
             variant="ghost"
-            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-50 hover:text-blue-600"
+            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
             onClick={(e) => {
               e.stopPropagation();
               onStockEdit(product);

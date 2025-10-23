@@ -1,0 +1,275 @@
+# Règles de développement - Inventory Manager
+
+## 🎯 Contexte du projet
+
+Application de gestion d'inventaire Next.js 16 avec Supabase, TypeScript et Shadcn/ui.
+Version actuelle : 0.1.12
+Production : https://stock.exabird.be/
+
+## 📋 Processus de développement OBLIGATOIRE
+
+### Versioning STRICT
+
+- **TOUJOURS** incrémenter la version avant tout commit fonctionnel
+- **Format** : VX.Y.Z (Semantic Versioning)
+  - X.0.0 : Mises à jour majeures (NÉCESSITE confirmation utilisateur)
+  - 0.X.0 : Nouvelles features complètes (NÉCESSITE confirmation utilisateur)
+  - 0.0.Z : Itérations, corrections, améliorations (peut être incrémenté automatiquement)
+- **Commandes** : `npm run version:patch`, `npm run version:minor`, `npm run version:major`
+
+### Workflow obligatoire
+
+1. **Développement local**
+   - Développer et tester avec `npm run dev`
+   - Tester manuellement dans le navigateur
+
+2. **Tests locaux OBLIGATOIRES**
+   ```bash
+   npm run build:check  # Compilation
+   npm run lint        # Linting
+   npm run type-check  # TypeScript
+   ```
+
+3. **Validation utilisateur**
+   - **TOUJOURS ATTENDRE** la validation explicite de l'utilisateur
+   - **NE JAMAIS DÉPLOYER** sans validation
+
+4. **Versioning et commit**
+   ```bash
+   npm run version:patch
+   git add .
+   git commit -m "📦 VX.X.X - Description"
+   ```
+
+5. **Déploiement via MCP**
+   - Push vers GitHub via MCP GitHub
+   - Vérifier les logs Vercel après 45 secondes
+   - Confirmer le bon fonctionnement
+
+## 🛠️ Stack technique
+
+- **Framework** : Next.js 16.0.0 (App Router)
+- **React** : 19.2.0
+- **TypeScript** : 5.x (strict mode)
+- **UI** : Shadcn/ui + Tailwind CSS 4.x
+- **Backend** : Supabase (PostgreSQL + Storage)
+- **Scanner** : html5-qrcode
+- **Forms** : React Hook Form + Zod
+
+## 📝 Conventions de code
+
+### TypeScript
+
+- **Typage strict obligatoire** : Toujours typer explicitement
+- **null vs undefined** : Utiliser `null` pour les valeurs optionnelles en BDD, `undefined` pour l'UI
+- **Interfaces** : PascalCase (ex: `Product`, `Category`)
+
+### Nommage
+
+- **Fichiers composants** : PascalCase (ex: `ProductCard.tsx`)
+- **Fichiers services** : camelCase (ex: `services.ts`, `stockService.ts`)
+- **Variables** : camelCase (ex: `productList`, `isLoading`)
+- **Constantes** : UPPER_SNAKE_CASE (ex: `MAX_PRODUCTS`, `API_BASE_URL`)
+- **Fonctions** : camelCase avec verbe (ex: `loadProducts()`, `handleSubmit()`)
+
+### Composants React
+
+- **Toujours fonctionnels** avec hooks (pas de classes)
+- **Ordre des hooks** : États → Effets → Callbacks → Render
+- **Props interface** : Toujours typer les props explicitement
+
+### Styles Tailwind
+
+- **Ordre des classes** : Layout → Spacing → Sizing → Typography → Visual → States
+- **Mobile-first** : Classes de base pour mobile, puis breakpoints (md:, lg:)
+
+### Gestion des erreurs
+
+- **try-catch obligatoire** pour toutes les opérations async
+- **Logs structurés** avec emojis :
+  - 📦 Chargement/requête
+  - ✅ Succès
+  - ❌ Erreur
+  - ⚠️ Warning
+  - 🔍 Debug
+  - ➕ Création
+  - ✏️ Modification
+  - 🗑️ Suppression
+
+### Commentaires
+
+- **En français** uniquement
+- **Descriptifs** : Expliquer le pourquoi, pas le comment
+- **JSDoc** pour les fonctions complexes avec exemples
+
+## 🏗️ Architecture
+
+### Structure de dossiers
+
+```
+src/
+├── app/              # Pages Next.js (App Router)
+│   ├── page.tsx      # Page principale (liste produits)
+│   ├── dashboard/    # Tableau de bord
+│   ├── settings/     # Paramètres
+│   └── api/          # Routes API
+├── components/       # Composants React
+│   ├── inventory/    # Composants gestion stock
+│   ├── scanner/      # Scanner codes-barres
+│   ├── layout/       # Composants layout
+│   └── ui/           # Composants UI Shadcn
+└── lib/              # Services et utilitaires
+    ├── services.ts   # ProductService, CategoryService
+    ├── supabase.ts   # Client Supabase + Types
+    └── *.ts          # Autres services
+```
+
+### Services principaux
+
+- **ProductService** : CRUD produits, recherche, historique
+- **CategoryService** : Gestion catégories
+- **StockService** : Opérations de stock, historique, raisons
+- **ProductImageService** : Upload et gestion images
+- **ScrapingService** : Scraping IA avec Claude (Phase 2)
+
+### Base de données Supabase
+
+Tables principales :
+- `products` : Produits avec métadonnées JSONB
+- `categories` : Catégories
+- `product_history` : Historique des modifications
+- `stock_operations` : Historique des opérations de stock
+- `stock_reasons` : Raisons prédéfinies pour opérations
+- `pieces` : Pièces individuelles avec numéros de série
+- `product_images` : Métadonnées des images
+
+## 🚫 À NE JAMAIS FAIRE
+
+- ❌ Déployer sans validation utilisateur
+- ❌ Oublier de mettre à jour la version avant commit
+- ❌ Incrémenter version mineure/majeure sans confirmation
+- ❌ Utiliser `any` en TypeScript
+- ❌ Créer des composants classe React
+- ❌ Commenter en anglais
+- ❌ Modifier les processus dans DEVELOPMENT_PROCESSES.md sans validation
+- ❌ Sauter les tests locaux obligatoires
+- ❌ Créer des fichiers de log dans le dossier racine
+- ❌ Ignorer les erreurs TypeScript
+
+## ✅ Bonnes pratiques
+
+### Performance
+
+- Utiliser `useMemo` et `useCallback` pour optimiser les re-renders
+- Lazy loading pour les composants lourds
+- Optimistic updates pour une UI réactive
+- Debounce pour les recherches et inputs fréquents
+
+### Sécurité
+
+- Validation côté serveur obligatoire (ne jamais faire confiance au client)
+- RLS Supabase toujours activé et bien configuré
+- Variables d'environnement pour les secrets (jamais de commit)
+- Sanitization des entrées utilisateur
+
+### Accessibilité
+
+- Labels toujours associés aux inputs
+- Attributs ARIA appropriés
+- Navigation au clavier complète
+- Ratios de contraste WCAG respectés
+
+### UX
+
+- Feedback visuel pour toutes les actions
+- Messages d'erreur clairs et en français
+- États de chargement visibles
+- Mobile-first design
+
+## 📚 Documentation obligatoire
+
+### Mettre à jour lors de changements
+
+- **CHANGELOG.md** : À chaque version (obligatoire)
+- **README.md** : Si changement d'installation/utilisation
+- **docs/ARCHITECTURE_GUIDE.md** : Si changement d'architecture
+- **Commentaires de code** : Pour toute fonction complexe
+
+### Ne PAS créer
+
+- ❌ Guides de test détaillés pour chaque modification
+- ❌ Multiples versions d'un même guide
+- ❌ Documentation de chaque bug corrigé
+- ❌ Guides "UX FIX" ou "CORRECTIONS" détaillés
+
+## 🔍 Debugging
+
+### Outils disponibles
+
+- `./test-app.sh` : Tests automatiques complets
+- `node monitor-realtime-console.js` : Monitoring temps réel
+- `./debug.config.js` : Configuration centralisée de debug
+
+### En cas de problème
+
+1. Consulter `docs/DEBUGGING_GUIDE.md`
+2. Vérifier les logs navigateur (F12)
+3. Vérifier les logs Supabase via MCP
+4. Consulter `PROBLEMES_CORRIGES.md` pour les problèmes connus
+5. Utiliser le monitoring temps réel
+
+## 🎯 Fichiers de référence essentiels
+
+- **START_HERE.md** : Point d'entrée pour démarrage
+- **docs/ARCHITECTURE_GUIDE.md** : Architecture complète
+- **docs/DEVELOPMENT_PROCESSES.md** : Processus obligatoires
+- **docs/DEBUGGING_GUIDE.md** : Guide de debugging
+- **SYNTHESE_RESTRUCTURATION.md** : État actuel du projet
+
+## 📦 Commandes essentielles
+
+```bash
+# Développement
+npm run dev                          # Lancer l'app
+npm run build:check                  # Vérifier compilation
+npm run lint                         # Vérifier linting
+npm run type-check                   # Vérifier TypeScript
+
+# Tests
+./test-app.sh                        # Tests complets
+node monitor-realtime-console.js    # Monitoring
+
+# Versioning
+npm run version:patch                # V0.0.X
+npm run version:minor                # V0.X.0 (nécessite confirmation)
+npm run version:major                # VX.0.0 (nécessite confirmation)
+npm run version:show                 # Afficher version actuelle
+```
+
+## 🎨 Design System
+
+- **Composants** : Toujours utiliser Shadcn/ui
+- **Couleurs** : Variables CSS Shadcn (primary, secondary, muted)
+- **Icônes** : Lucide React
+- **Animations** : Framer Motion si nécessaire
+- **Responsive** : Mobile-first avec breakpoints Tailwind
+
+## 🔗 Intégrations
+
+- **MCP Supabase** : Logs API, Database, Storage
+- **MCP Vercel** : Logs déploiement, métriques
+- **MCP GitHub** : Push automatique, CI/CD
+
+## ⚠️ Priorités de développement
+
+1. **Stabilité** : Pas de bugs critiques
+2. **UX** : Interface intuitive et responsive
+3. **Performance** : Chargements rapides
+4. **Documentation** : Code bien documenté
+5. **Sécurité** : RLS et validations strictes
+
+---
+
+**Ces règles sont OBLIGATOIRES et doivent être suivies systématiquement.**
+**Consulter docs/DEVELOPMENT_PROCESSES.md pour les détails complets.**
+

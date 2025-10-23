@@ -11,8 +11,8 @@ export default function TestSupabaseConfig() {
     const testConfig = async () => {
       try {
         // Vérifier la configuration Supabase
-        const url = supabase.supabaseUrl;
-        const key = supabase.supabaseKey;
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'Non définie';
+        const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'Non définie';
         
         console.log('🔍 Configuration Supabase:');
         console.log('URL:', url);
@@ -31,14 +31,14 @@ export default function TestSupabaseConfig() {
           .limit(1);
 
         if (error) {
-          console.error('❌ Erreur Supabase:', error);
+          console.warn('⚠️ Erreur Supabase (config test):', error);
           setTestResult(`Erreur: ${error.message}`);
         } else {
           console.log('✅ Connexion réussie:', data);
           setTestResult(`Succès: ${data?.length || 0} produit(s) trouvé(s)`);
         }
       } catch (err) {
-        console.error('❌ Erreur générale:', err);
+        console.warn('⚠️ Erreur générale (config test):', err);
         setTestResult(`Erreur générale: ${err}`);
       }
     };

@@ -18,20 +18,6 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
-  // Charger les paramètres depuis localStorage
-  useEffect(() => {
-    const settings = localStorage.getItem('ai_settings');
-    if (settings) {
-      const parsed = JSON.parse(settings);
-      setClaudeApiKey(parsed.claudeApiKey || '');
-      setSelectedModel(parsed.model || 'claude-3-5-sonnet-20241022');
-      setMinConfidence(parsed.minConfidence || 75);
-      setCustomPrompt(parsed.customPrompt || getDefaultPrompt());
-    } else {
-      setCustomPrompt(getDefaultPrompt());
-    }
-  }, []);
-
   // Prompt par défaut
   function getDefaultPrompt() {
     return `Tu es un expert en analyse de données produit. Ta mission est de rechercher et extraire des informations produit depuis les sites des fabricants.

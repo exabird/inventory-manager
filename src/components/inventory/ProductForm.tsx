@@ -58,7 +58,7 @@ export default function ProductForm({
         const cats = await CategoryService.getAll();
         setCategories(cats);
       } catch (error) {
-        console.error('Erreur lors du chargement des catégories:', error);
+        console.warn('⚠️ Erreur lors du chargement des catégories:', error);
         setCategories([]);
       } finally {
         setIsLoadingCategories(false);
@@ -124,7 +124,7 @@ export default function ProductForm({
     try {
       await onSubmit(cleanedData);
     } catch (error) {
-      console.error('Erreur lors de la soumission:', error);
+      console.warn('⚠️ Erreur lors de la soumission:', error);
     }
   };
 

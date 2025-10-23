@@ -19,7 +19,7 @@ export default function ProductDebug() {
         setProducts(data);
         setError(null);
       } catch (err) {
-        console.error('🔍 Debug: Erreur:', err);
+        console.warn('⚠️ Debug: Erreur:', err);
         setError(err instanceof Error ? err.message : 'Erreur inconnue');
       } finally {
         setLoading(false);

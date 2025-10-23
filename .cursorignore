@@ -1,0 +1,22 @@
+# Fichiers de log à ignorer par Next.js et Cursor
+dev-output.log
+dev.log
+*.log
+
+# Dossier de logs
+/logs/
+
+# Fichiers de monitoring
+*.pid
+
+# Build files
+/.next/
+/out/
+*.tsbuildinfo
+
+# Dependencies
+/node_modules/
+
+# Environnement
+.env*
+

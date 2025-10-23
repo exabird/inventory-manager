@@ -1,0 +1,118 @@
+---
+description: "Règles fondamentales du projet Inventory Manager - contexte, processus et standards obligatoires"
+globs: "*"
+alwaysApply: true
+---
+
+# Règles Fondamentales - Inventory Manager
+
+## Contexte du Projet
+
+- **Application** : Gestion d'inventaire Next.js 16 avec Supabase
+- **Version actuelle** : 0.1.12
+- **Production** : https://stock.exabird.be/
+- **Statut** : 100% fonctionnel, stable
+
+## Stack Technique
+
+- **Frontend** : Next.js 16.0.0 (App Router), React 19.2.0, TypeScript 5.x
+- **UI** : Shadcn/ui + Tailwind CSS 4.x (mobile-first)
+- **Backend** : Supabase (PostgreSQL + Storage + RLS)
+- **Formulaires** : React Hook Form + Zod
+- **Scanner** : html5-qrcode
+
+## Processus de Développement OBLIGATOIRE
+
+### Workflow en 6 étapes
+
+1. **Développement local** : `npm run dev`, tester dans le navigateur
+2. **Tests locaux** : `npm run build:check`, `npm run lint`, `npm run type-check`
+3. **Validation utilisateur** : ATTENDRE validation explicite OBLIGATOIRE
+4. **Versioning** : `npm run version:patch` (ou minor/major avec confirmation)
+5. **Commit** : `git commit -m "📦 VX.X.X - Description"`
+6. **Déploiement** : Push GitHub → Vercel (vérifier logs après 45s)
+
+### Règles de Versioning STRICTES
+
+- **Patch (V0.0.Z)** : Corrections, améliorations mineures → Agent peut incrémenter
+- **Minor (V0.X.0)** : Nouvelles features complètes → NÉCESSITE confirmation utilisateur
+- **Major (VX.0.0)** : Changements majeurs → NÉCESSITE confirmation utilisateur
+
+## Ce que l'Agent DOIT TOUJOURS Faire
+
+<example type="required">
+✅ Attendre validation utilisateur avant déploiement
+✅ Incrémenter version avant chaque commit fonctionnel
+✅ Exécuter tous les tests obligatoires
+✅ Typer strictement en TypeScript (0 any toléré)
+✅ Commenter le code en français
+✅ Utiliser logs structurés avec emojis (📦 ✅ ❌ ⚠️ 🔍)
+</example>
+
+## Ce que l'Agent NE DOIT JAMAIS Faire
+
+<example type="invalid">
+❌ Déployer sans validation utilisateur explicite
+❌ Incrémenter version minor/major sans confirmation
+❌ Utiliser 'any' en TypeScript
+❌ Créer des composants classe React
+❌ Sauter les tests obligatoires
+❌ Ignorer les erreurs TypeScript
+❌ Commenter en anglais
+❌ Modifier DEVELOPMENT_PROCESSES.md sans validation
+</example>
+
+## Documentation Essentielle
+
+- **Architecture** : `docs/ARCHITECTURE_GUIDE.md` (97 KB, 1,183 lignes)
+- **Processus** : `docs/DEVELOPMENT_PROCESSES.md` (processus détaillés)
+- **Debugging** : `docs/DEBUGGING_GUIDE.md` (159 KB, 1,022 lignes)
+- **État actuel** : `SYNTHESE_RESTRUCTURATION.md`
+- **Bugs connus** : `PROBLEMES_CORRIGES.md`
+
+## Services Principaux
+
+### ProductService (src/lib/services.ts)
+```typescript
+ProductService.getAll()              // Tous les produits avec catégories
+ProductService.getByBarcode(code)    // Recherche par code-barres
+ProductService.create(product)       // Créer produit
+ProductService.update(id, updates)   // Mettre à jour
+ProductService.delete(id)            // Supprimer
+```
+
+### StockService (src/lib/stockService.ts)
+```typescript
+StockService.performStockOperation(productId, operation)
+StockService.getOperationHistory(productId)
+StockService.updateMinStockSettings(productId, settings)
+```
+
+## Commandes Essentielles
+
+```bash
+# Développement
+npm run dev              # Lancer l'app
+npm run build:check      # Vérifier compilation
+npm run lint             # Vérifier linting
+npm run type-check       # Vérifier TypeScript
+
+# Tests
+./test-app.sh            # Tests complets (83%+ attendu)
+
+# Versioning
+npm run version:patch    # V0.0.X (auto OK)
+npm run version:minor    # V0.X.0 (confirmation requise)
+npm run version:major    # VX.0.0 (confirmation requise)
+
+# Monitoring
+node monitor-realtime-console.js   # Monitoring temps réel
+```
+
+## Métriques de Qualité
+
+- **0 erreur TypeScript** (obligatoire)
+- **Build réussi** (obligatoire)
+- **Tests automatiques** : 83%+ de réussite
+- **Performance** : Chargement < 2s
+- **Mobile-first** : Responsive parfait

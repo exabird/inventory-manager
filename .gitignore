@@ -29,6 +29,14 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+dev-output.log
+dev.log
+dev.pid
+server.pid
+
+# logs directory
+/logs/
+*.log
 
 # env files (can opt-in for committing if needed)
 .env*

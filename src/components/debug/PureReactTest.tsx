@@ -17,7 +17,7 @@ export default function PureReactTest() {
         setStatus('✅ React pur fonctionne !');
         console.log('🔍 PureReactTest: Test terminé');
       } catch (error) {
-        console.error('🔍 PureReactTest: Erreur:', error);
+        console.warn('⚠️ PureReactTest: Erreur:', error);
         setStatus(`❌ Erreur: ${error}`);
       }
     };

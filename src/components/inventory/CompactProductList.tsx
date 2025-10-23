@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Search, Filter, Package, Hash, Tag, ArrowUpFromLine, ArrowDownToLine, Edit3, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import CompactProductListItem from '@/components/inventory/CompactProductListItem';
 import FilterModal from '@/components/inventory/FilterModal';
 import { Product } from '@/lib/supabase';
@@ -158,35 +159,50 @@ export default function CompactProductList({
     let filtered = productsToFilter;
 
     if (filterConfig.categories.length > 0) {
-      filtered = filtered.filter(product =>
-        product.categories?.name && filterConfig.categories.includes(product.categories.name)
-      );
+      filtered = filtered.filter(product => {
+        try {
+          return product.categories?.name && filterConfig.categories.includes(product.categories.name);
+        } catch (error) {
+          console.warn('⚠️ Erreur lors du filtrage par catégorie:', error);
+          return true;
+        }
+      });
     }
 
     if (filterConfig.stockStatus.length > 0) {
       filtered = filtered.filter(product => {
-        const quantity = product.quantity || 0;
-        return filterConfig.stockStatus.some(status => {
-          switch (status) {
-            case 'in-stock':
-              return quantity >= 5;
-            case 'low-stock':
-              return quantity > 0 && quantity < 5;
-            case 'out-of-stock':
-              return quantity === 0;
-            default:
-              return false;
-          }
-        });
+        try {
+          const quantity = product.quantity || 0;
+          return filterConfig.stockStatus.some(status => {
+            switch (status) {
+              case 'in-stock':
+                return quantity >= 5;
+              case 'low-stock':
+                return quantity > 0 && quantity < 5;
+              case 'out-of-stock':
+                return quantity === 0;
+              default:
+                return false;
+            }
+          });
+        } catch (error) {
+          console.warn('⚠️ Erreur lors du filtrage par statut:', error);
+          return true;
+        }
       });
     }
 
     if (filterConfig.priceRange.min !== null || filterConfig.priceRange.max !== null) {
       filtered = filtered.filter(product => {
-        const price = product.selling_price_htva || 0;
-        const min = filterConfig.priceRange.min || 0;
-        const max = filterConfig.priceRange.max || Infinity;
-        return price >= min && price <= max;
+        try {
+          const price = product.selling_price_htva || 0;
+          const min = filterConfig.priceRange.min || 0;
+          const max = filterConfig.priceRange.max || Infinity;
+          return price >= min && price <= max;
+        } catch (error) {
+          console.warn('⚠️ Erreur lors du filtrage par prix:', error);
+          return true;
+        }
       });
     }
 
@@ -197,39 +213,58 @@ export default function CompactProductList({
 
   return (
     <>
-      {/* Header avec recherche et filtres */}
-      <div className="p-3 bg-white border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Chercher..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-8 h-8 text-sm"
-            />
+      {/* Header avec recherche et filtres - Design Shadcn */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <div className="p-4">
+          <div className="flex items-center gap-3">
+            {/* Barre de recherche Shadcn */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Rechercher par nom, référence, marque..."
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="pl-10"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => onSearchChange('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  title="Effacer la recherche"
+                >
+                  <span className="text-xs">✕</span>
+                </button>
+              )}
+            </div>
+            
+            {/* Bouton filtres Shadcn */}
+            <Button
+              variant="outline"
+              size="default"
+              className="gap-2"
+              onClick={() => setShowFilterModal(true)}
+              title="Filtres & Colonnes"
+            >
+              <Filter className="h-4 w-4" />
+              <span className="hidden sm:inline">Filtres</span>
+              {(filterConfig.categories.length > 0 || filterConfig.stockStatus.length > 0) && (
+                <Badge variant="default" className="ml-1">
+                  {filterConfig.categories.length + filterConfig.stockStatus.length}
+                </Badge>
+              )}
+            </Button>
           </div>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 px-2"
-            onClick={() => setShowFilterModal(true)}
-            title="Filtres & Colonnes"
-          >
-            <Filter className="h-4 w-4" />
-          </Button>
         </div>
       </div>
 
-      {/* Header de colonnes - Desktop uniquement */}
-      <div className="hidden md:block bg-gray-50 border-b border-gray-200">
-        <div className="flex items-center gap-3 py-2 px-4 text-xs font-medium text-gray-600 uppercase tracking-wide">
+      {/* Header de colonnes - Desktop uniquement - Design Shadcn */}
+      <div className="hidden md:block bg-muted/40 border-b sticky top-[76px] z-[9]">
+        <div className="flex items-center gap-3 py-2.5 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wide">
           <div className="w-4"></div>
           <div className="w-12"></div>
           <button 
-            className="flex-1 flex items-center gap-1 hover:text-gray-800 transition-colors"
+            className="flex-1 flex items-center gap-1 hover:text-foreground transition-colors"
             onClick={() => handleSort('name')}
           >
             <span>Produit</span>
@@ -292,12 +327,12 @@ export default function CompactProductList({
           
           {/* Colonnes dynamiques */}
           {Object.keys(columnVisibility)
-            .filter(key => !['manufacturer_ref', 'category', 'quantity', 'selling_price_htva', 'purchase_price_htva'].includes(key))
+            .filter(key => !['manufacturer_ref', 'category', 'quantity', 'selling_price_htva', 'purchase_price_htva', 'brand'].includes(key))
             .filter(key => columnVisibility[key])
             .map(fieldKey => (
               <div key={fieldKey} className="w-20 text-center">
                 <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                  {fieldKey.replace('metadata.', '')}
+                  {fieldKey.replace('metadata.', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                 </span>
               </div>
             ))}
@@ -325,33 +360,38 @@ export default function CompactProductList({
               />
             ))}
             
-            {/* Ligne de total */}
-            <div className="hidden md:flex items-center gap-3 py-3 px-4 border-t-2 border-gray-300 bg-gray-50 font-semibold text-gray-900">
+            {/* Ligne de total - Design Shadcn sobre */}
+            <div className="hidden md:flex items-center gap-3 py-3 px-4 border-t-2 bg-muted/30 font-semibold sticky bottom-0">
               <div className="w-4"></div>
               <div className="w-12"></div>
               <div className="flex-1">
-                <span className="text-sm">Total ({processedProducts.length} produits)</span>
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-foreground">
+                    Total ({processedProducts.length} produits)
+                  </span>
+                </div>
               </div>
               {columnVisibility.manufacturer_ref && <div className="w-24"></div>}
               {columnVisibility.category && <div className="w-32"></div>}
               {columnVisibility.brand && <div className="w-24"></div>}
               {columnVisibility.quantity && (
-                <div className="w-20 text-right">
-                  <span className="text-sm">
+                <div className="w-20 text-center">
+                  <Badge variant="default" className="font-semibold">
                     {processedProducts.reduce((sum, p) => sum + (p.quantity || 0), 0)} unités
-                  </span>
+                  </Badge>
                 </div>
               )}
               {columnVisibility.selling_price_htva && (
-                <div className="w-20 text-right">
-                  <span className="text-sm">
+                <div className="w-24 text-right">
+                  <span className="text-sm font-semibold">
                     {processedProducts.reduce((sum, p) => sum + (p.selling_price_htva || 0), 0).toFixed(2)}€
                   </span>
                 </div>
               )}
               {columnVisibility.purchase_price_htva && (
-                <div className="w-20 text-right">
-                  <span className="text-sm">
+                <div className="w-24 text-right">
+                  <span className="text-sm font-medium text-muted-foreground">
                     {processedProducts.reduce((sum, p) => sum + (p.purchase_price_htva || 0), 0).toFixed(2)}€
                   </span>
                 </div>
@@ -359,11 +399,11 @@ export default function CompactProductList({
               
               {/* Colonnes dynamiques dans le total */}
               {Object.keys(columnVisibility)
-                .filter(key => !['manufacturer_ref', 'category', 'quantity', 'selling_price_htva', 'purchase_price_htva'].includes(key))
+                .filter(key => !['manufacturer_ref', 'category', 'quantity', 'selling_price_htva', 'purchase_price_htva', 'brand'].includes(key))
                 .filter(key => columnVisibility[key])
                 .map(fieldKey => (
-                  <div key={fieldKey} className="w-20 text-center">
-                    <span className="text-sm text-gray-500">-</span>
+                  <div key={fieldKey} className="w-24 text-center">
+                    <span className="text-xs text-muted-foreground">-</span>
                   </div>
                 ))}
               

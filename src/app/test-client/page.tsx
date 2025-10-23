@@ -18,7 +18,7 @@ export default function TestClient() {
           .limit(5);
 
         if (error) {
-          console.error('❌ Erreur Supabase:', error);
+          console.warn('⚠️ Erreur Supabase (test):', error);
           setStatus(`Erreur: ${error.message}`);
           return;
         }
@@ -27,7 +27,7 @@ export default function TestClient() {
         setStatus(`Connexion réussie - ${data?.length || 0} produits trouvés`);
         setProducts(data || []);
       } catch (err) {
-        console.error('❌ Erreur générale:', err);
+        console.warn('⚠️ Erreur générale (test):', err);
         setStatus(`Erreur générale: ${err}`);
       }
     };

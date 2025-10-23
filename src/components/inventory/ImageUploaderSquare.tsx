@@ -45,7 +45,7 @@ export default function ImageUploader({
       
       onImagesChange(existingImages);
     } catch (error) {
-      console.error('Erreur lors du chargement des images:', error);
+      console.warn('⚠️ Erreur lors du chargement des images:', error);
     } finally {
       setIsLoading(false);
     }
@@ -70,7 +70,7 @@ export default function ImageUploader({
       .upload(filePath, file);
 
     if (uploadError) {
-      console.error('❌ Erreur upload Supabase:', uploadError);
+      console.warn('⚠️ Erreur upload Supabase:', uploadError);
       throw new Error(`Erreur d'upload: ${uploadError.message}`);
     }
 
@@ -126,7 +126,7 @@ export default function ImageUploader({
           const image = await uploadImage(file);
           newImages.push(image);
         } catch (fileError) {
-          console.error(`Erreur pour le fichier ${file.name}:`, fileError);
+          console.warn(`⚠️ Erreur pour le fichier ${file.name}:`, fileError);
           // Continuer avec les autres fichiers même si un échoue
         }
       }
@@ -145,7 +145,7 @@ export default function ImageUploader({
         alert('Aucune image n\'a pu être uploadée. Vérifiez les logs de la console.');
       }
     } catch (error) {
-      console.error('Erreur générale lors de l\'upload:', error);
+      console.warn('⚠️ Erreur générale lors de l\'upload:', error);
       alert('Erreur lors de l\'upload des images. Vérifiez les logs de la console.');
     } finally {
       setIsUploading(false);
@@ -177,7 +177,7 @@ export default function ImageUploader({
         .remove([imageToDelete.storage_path]);
 
       if (storageError) {
-        console.error('Erreur suppression storage:', storageError);
+        console.warn('⚠️ Erreur suppression storage:', storageError);
       }
 
       // Supprimer de la base de données
@@ -195,7 +195,7 @@ export default function ImageUploader({
 
       onImagesChange(updatedImages);
     } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
+      console.warn('⚠️ Erreur lors de la suppression:', error);
     }
   };
 
@@ -214,7 +214,7 @@ export default function ImageUploader({
       onImagesChange(updatedImages);
       console.log('✅ Image featured mise à jour');
     } catch (error) {
-      console.error('Erreur lors de la définition featured:', error);
+      console.warn('⚠️ Erreur lors de la définition featured:', error);
     }
   };
 

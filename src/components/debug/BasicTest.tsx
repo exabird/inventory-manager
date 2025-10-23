@@ -17,7 +17,7 @@ export default function BasicTest() {
         setStatus('✅ Test basique réussi !');
         console.log('🔍 BasicTest: Test terminé');
       } catch (error) {
-        console.error('🔍 BasicTest: Erreur:', error);
+        console.warn('⚠️ BasicTest: Erreur:', error);
         setStatus(`❌ Erreur: ${error}`);
       }
     };

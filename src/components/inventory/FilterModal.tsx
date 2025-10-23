@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Search, Package, Tag, DollarSign, Calendar, Building2, RotateCcw, Settings, Eye, EyeOff } from 'lucide-react';
+import { X, Search, Package, Tag, DollarSign, Calendar, Building2, RotateCcw, Settings, Eye, EyeOff, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { Product } from '@/lib/supabase';
 
 type FilterCategory = 'statut' | 'categorie' | 'prix' | 'marque' | 'date' | 'stock' | 'colonnes';
@@ -22,6 +23,9 @@ interface ColumnVisibility {
   quantity: boolean;
   selling_price_htva: boolean;
   purchase_price_htva: boolean;
+  brand: boolean;
+  warranty_period: boolean;
+  min_stock_quantity: boolean;
   [key: string]: boolean; // Pour les métadonnées dynamiques
 }
 
@@ -145,35 +149,48 @@ export default function FilterModal({
 
   // Extraire toutes les métadonnées disponibles des produits
   const getAllMetadataFields = () => {
-    const allFields = new Set<string>();
-    const metadataFields = new Set<string>();
-    
-    products.forEach(product => {
-      // Champs de base (exclure les champs déjà gérés)
-      const excludedFields = ['id', 'created_at', 'updated_at', 'manufacturer_ref', 'category', 'quantity', 'selling_price_htva', 'purchase_price_htva'];
-      Object.keys(product).forEach(key => {
-        if (!excludedFields.includes(key)) {
-          allFields.add(key);
+    try {
+      const allFields = new Set<string>();
+      const metadataFields = new Set<string>();
+      
+      products.forEach(product => {
+        try {
+          // Champs de base (exclure les champs déjà gérés)
+          const excludedFields = ['id', 'created_at', 'updated_at', 'manufacturer_ref', 'category', 'quantity', 'selling_price_htva', 'purchase_price_htva'];
+          Object.keys(product).forEach(key => {
+            if (!excludedFields.includes(key)) {
+              allFields.add(key);
+            }
+          });
+          
+          // Métadonnées dans l'objet metadata
+          if (product.metadata && typeof product.metadata === 'object') {
+            Object.keys(product.metadata).forEach(key => {
+              metadataFields.add(`metadata.${key}`);
+            });
+          }
+        } catch (error) {
+          console.warn('⚠️ Erreur lors du traitement d\'un produit:', error);
         }
       });
       
-      // Métadonnées dans l'objet metadata
-      if (product.metadata && typeof product.metadata === 'object') {
-        Object.keys(product.metadata).forEach(key => {
-          metadataFields.add(`metadata.${key}`);
-        });
-      }
-    });
-    
-    // Organiser les champs par catégorie
-    const baseFields = Array.from(allFields).sort();
-    const metaFields = Array.from(metadataFields).sort();
-    
-    return {
-      base: baseFields,
-      metadata: metaFields,
-      all: [...baseFields, ...metaFields].sort()
-    };
+      // Organiser les champs par catégorie
+      const baseFields = Array.from(allFields).sort();
+      const metaFields = Array.from(metadataFields).sort();
+      
+      return {
+        base: baseFields,
+        metadata: metaFields,
+        all: [...baseFields, ...metaFields].sort()
+      };
+    } catch (error) {
+      console.warn('⚠️ Erreur lors de l\'extraction des métadonnées:', error);
+      return {
+        base: [],
+        metadata: [],
+        all: []
+      };
+    }
   };
 
   const handleReset = () => {
@@ -362,35 +379,51 @@ export default function FilterModal({
               Configurer l'affichage des colonnes
             </div>
             
-            {/* Colonnes principales */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-medium text-gray-700 flex items-center gap-2">
-                <Settings className="h-3 w-3" />
+            {/* Colonnes principales - Shadcn sobre */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-semibold text-foreground flex items-center gap-2">
+                <Settings className="h-4 w-4 text-muted-foreground" />
                 Colonnes principales
               </h4>
-              {[
-                { key: 'manufacturer_ref', label: 'Référence fabricant', icon: Hash },
-                { key: 'category', label: 'Catégorie', icon: Tag },
-                { key: 'quantity', label: 'Stock', icon: Package },
-                { key: 'selling_price_htva', label: 'Prix de vente', icon: DollarSign },
-                { key: 'purchase_price_htva', label: 'Prix d\'achat', icon: DollarSign }
-              ].map(column => (
-                <div key={column.key} className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-50">
-                  <Checkbox
-                    id={column.key}
-                    checked={columnVisibility[column.key] || false}
-                    onCheckedChange={() => handleColumnToggle(column.key)}
-                    className="h-4 w-4"
-                  />
-                  <column.icon className="h-3 w-3 text-gray-400" />
-                  <label 
-                    htmlFor={column.key}
-                    className="text-xs font-medium text-gray-900 cursor-pointer flex-1"
-                  >
-                    {column.label}
-                  </label>
-                </div>
-              ))}
+              <div className="space-y-1.5">
+                {[
+                  { key: 'manufacturer_ref', label: 'Référence fabricant', icon: Hash },
+                  { key: 'category', label: 'Catégorie', icon: Tag },
+                  { key: 'brand', label: 'Marque', icon: Building2 },
+                  { key: 'quantity', label: 'Stock', icon: Package },
+                  { key: 'selling_price_htva', label: 'Prix de vente', icon: DollarSign },
+                  { key: 'purchase_price_htva', label: 'Prix d\'achat', icon: DollarSign }
+                ].map(column => {
+                  const isChecked = columnVisibility[column.key] || false;
+                  return (
+                    <div 
+                      key={column.key} 
+                      className={`flex items-center space-x-2 p-2 rounded-md border cursor-pointer transition-colors ${
+                        isChecked 
+                          ? 'bg-muted border-border' 
+                          : 'border-transparent hover:bg-muted/50'
+                      }`}
+                      onClick={() => handleColumnToggle(column.key)}
+                    >
+                      <Checkbox
+                        id={column.key}
+                        checked={isChecked}
+                        onCheckedChange={() => handleColumnToggle(column.key)}
+                      />
+                      <column.icon className="h-4 w-4 text-muted-foreground" />
+                      <label 
+                        htmlFor={column.key}
+                        className="text-sm font-medium cursor-pointer flex-1"
+                      >
+                        {column.label}
+                      </label>
+                      {isChecked && (
+                        <Eye className="h-4 w-4 text-primary" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Champs de base supplémentaires */}
@@ -435,47 +468,66 @@ export default function FilterModal({
               </div>
             )}
 
-            {/* Métadonnées personnalisées */}
+            {/* Métadonnées personnalisées - Shadcn sobre */}
             {fieldData.metadata.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="text-xs font-medium text-gray-700 flex items-center gap-2">
-                  <Package className="h-3 w-3" />
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold flex items-center gap-2">
+                  <Package className="h-4 w-4 text-muted-foreground" />
                   Métadonnées personnalisées
+                  <Badge variant="secondary" className="ml-auto">
+                    {fieldData.metadata.length}
+                  </Badge>
                 </h4>
-                <div className="space-y-1 max-h-32 overflow-y-auto">
+                <div className="space-y-1.5 max-h-40 overflow-y-auto">
                   {fieldData.metadata
                     .filter(field => 
                       field.toLowerCase().includes(searchQuery.toLowerCase())
                     )
-                    .map(field => (
-                      <div key={field} className="flex items-center space-x-2 p-1 rounded hover:bg-gray-50">
-                        <Checkbox
-                          id={field}
-                          checked={columnVisibility[field] || false}
-                          onCheckedChange={() => handleColumnToggle(field)}
-                          className="h-4 w-4"
-                        />
-                        <label 
-                          htmlFor={field}
-                          className="text-xs font-medium text-gray-900 cursor-pointer flex-1"
+                    .map(field => {
+                      const isChecked = columnVisibility[field] || false;
+                      return (
+                        <div 
+                          key={field} 
+                          className={`flex items-center space-x-2 p-2 rounded-md border cursor-pointer transition-colors ${
+                            isChecked 
+                              ? 'bg-muted border-border' 
+                              : 'border-transparent hover:bg-muted/50'
+                          }`}
+                          onClick={() => handleColumnToggle(field)}
                         >
-                          {field.replace('metadata.', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        </label>
-                      </div>
-                    ))}
+                          <Checkbox
+                            id={field}
+                            checked={isChecked}
+                            onCheckedChange={() => handleColumnToggle(field)}
+                          />
+                          <label 
+                            htmlFor={field}
+                            className="text-sm font-medium cursor-pointer flex-1"
+                          >
+                            {field.replace('metadata.', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </label>
+                          {isChecked && (
+                            <Eye className="h-4 w-4 text-primary" />
+                          )}
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             )}
 
-            {/* Ajouter une colonne personnalisée */}
-            <div className="space-y-2 border-t pt-3">
-              <h4 className="text-xs font-medium text-gray-700">Ajouter une colonne</h4>
+            {/* Ajouter une colonne personnalisée - Shadcn sobre */}
+            <div className="space-y-3 border-t pt-4 mt-4">
+              <h4 className="text-xs font-semibold flex items-center gap-2">
+                <Hash className="h-4 w-4 text-muted-foreground" />
+                Créer une colonne personnalisée
+              </h4>
               <div className="flex gap-2">
                 <Input
-                  placeholder="Nom du champ..."
+                  placeholder="Ex: couleur, taille..."
                   value={customFieldName}
                   onChange={(e) => setCustomFieldName(e.target.value)}
-                  className="h-8 text-xs flex-1"
+                  className="flex-1"
                 />
                 <Button
                   size="sm"
@@ -484,11 +536,13 @@ export default function FilterModal({
                     setCustomFieldName('');
                   }}
                   disabled={!customFieldName}
-                  className="h-8 px-2 text-xs"
                 >
                   Ajouter
                 </Button>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Les colonnes personnalisées seront ajoutées comme métadonnées
+              </p>
             </div>
           </div>
         );
@@ -503,37 +557,56 @@ export default function FilterModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-end pt-20 pr-4">
-      <div className="relative bg-white rounded-lg shadow-lg w-96 max-h-[80vh] flex flex-col border border-gray-200">
-        {/* Header */}
-        <div className="flex items-center justify-between p-3 border-b">
-          <h2 className="text-lg font-semibold">Filtres & Colonnes</h2>
-          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+    <div className="fixed inset-0 z-50 flex items-start justify-end pt-16 pr-4 animate-in fade-in duration-200">
+      {/* Overlay Shadcn */}
+      <div 
+        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      <div className="relative bg-card rounded-lg shadow-lg w-[28rem] max-h-[85vh] flex flex-col border animate-in slide-in-from-right duration-200">
+        {/* Header Shadcn sobre */}
+        <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center gap-3">
+            <Settings className="h-5 w-5 text-muted-foreground" />
+            <h2 className="text-lg font-semibold text-foreground">
+              Filtres & Colonnes
+            </h2>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onClose}
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>
 
         {/* Content */}
         <div className="flex flex-1 overflow-hidden">
-          {/* Left Panel - Categories */}
-          <div className="w-1/3 border-r bg-gray-50 p-2 space-y-1 overflow-y-auto">
-            {filterCategories.map(cat => (
-              <Button
-                key={cat.id}
-                variant={activeCategory === cat.id ? 'secondary' : 'ghost'}
-                className="w-full justify-start h-8 text-xs"
-                onClick={() => setActiveCategory(cat.id as FilterCategory)}
-              >
-                <cat.icon className="h-3 w-3 mr-2" />
-                {cat.label}
-              </Button>
-            ))}
+          {/* Left Panel - Categories - Shadcn */}
+          <div className="w-32 border-r bg-muted/40 p-2 space-y-1 overflow-y-auto">
+            {filterCategories.map(cat => {
+              const isActive = activeCategory === cat.id;
+              return (
+                <Button
+                  key={cat.id}
+                  variant={isActive ? "default" : "ghost"}
+                  size="sm"
+                  className="w-full justify-start"
+                  onClick={() => setActiveCategory(cat.id as FilterCategory)}
+                >
+                  <cat.icon className="h-4 w-4 mr-2" />
+                  {cat.label}
+                </Button>
+              );
+            })}
           </div>
 
-          {/* Right Panel - Filter Options */}
-          <div className="flex-1 p-3 overflow-y-auto">
-            <div className="mb-3">
-              <h3 className="text-sm font-medium text-gray-900 capitalize">
+          {/* Right Panel - Filter Options - Shadcn */}
+          <div className="flex-1 p-4 overflow-y-auto">
+            <div className="mb-3 pb-2 border-b">
+              <h3 className="text-sm font-semibold capitalize">
                 {filterCategories.find(c => c.id === activeCategory)?.label}
               </h3>
             </div>
@@ -541,11 +614,22 @@ export default function FilterModal({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end p-3 border-t">
-          <Button variant="outline" size="sm" onClick={handleReset} className="h-8 text-xs">
-            <RotateCcw className="h-3 w-3 mr-1" />
-            Effacer tous les filtres
+        {/* Footer - Shadcn */}
+        <div className="flex items-center justify-between p-4 border-t gap-3">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleReset}
+            className="gap-2"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Réinitialiser
+          </Button>
+          <Button 
+            size="sm" 
+            onClick={onClose}
+          >
+            Appliquer
           </Button>
         </div>
       </div>

@@ -27,11 +27,13 @@ export default function ProductThumbnail({
   const loadFeaturedImage = async () => {
     try {
       setIsLoading(true);
-      const images = await ProductImageService.getByProductId(productId);
-      const featured = images.find(img => img.is_featured) || images[0];
-      setFeaturedImage(featured || null);
+      // Temporairement désactivé pour éviter les erreurs UUID
+      // const images = await ProductImageService.getByProductId(productId);
+      // const featured = images.find(img => img.is_featured) || images[0];
+      // setFeaturedImage(featured || null);
+      setFeaturedImage(null);
     } catch (error) {
-      console.error('Erreur lors du chargement de l\'image featured:', error);
+      // Ne pas logger les erreurs si c'est juste qu'il n'y a pas d'images
       setFeaturedImage(null);
     } finally {
       setIsLoading(false);

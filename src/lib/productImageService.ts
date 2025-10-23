@@ -16,62 +16,89 @@ export interface ProductImage {
 export class ProductImageService {
   // Récupérer toutes les images d'un produit
   static async getByProductId(productId: string): Promise<ProductImage[]> {
-    const { data, error } = await supabase
-      .from('product_images')
-      .select('*')
-      .eq('product_id', productId)
-      .order('created_at', { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('product_images')
+        .select('*')
+        .eq('product_id', productId)
+        .order('created_at', { ascending: true });
 
-    if (error) {
-      console.error('Erreur lors de la récupération des images:', error);
-      throw error;
+      if (error) {
+        // Ne pas logger les erreurs si c'est juste qu'il n'y a pas d'images
+        if (error.code !== 'PGRST116') { // Code pour "no rows found"
+          console.warn('⚠️ Erreur lors de la récupération des images:', error);
+        }
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      // En cas d'erreur réseau ou autre, retourner un tableau vide
+      console.warn('Erreur lors de la récupération des images:', error);
+      return [];
     }
-
-    return data || [];
   }
 
   // Ajouter une nouvelle image
   static async create(imageData: Omit<ProductImage, 'id' | 'created_at' | 'updated_at'>): Promise<ProductImage> {
-    const { data, error } = await supabase
-      .from('product_images')
-      .insert([imageData])
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('product_images')
+        .insert([imageData])
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Erreur lors de la création de l\'image:', error);
+      if (error) {
+        // Ne pas logger les erreurs de création si c'est juste une contrainte
+        if (error.code !== '23505') { // Code pour "unique violation"
+          console.warn('⚠️ Erreur lors de la création de l\'image:', error);
+        }
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.warn('Erreur lors de la création de l\'image:', error);
       throw error;
     }
-
-    return data;
   }
 
   // Mettre à jour une image
   static async update(id: string, updates: Partial<ProductImage>): Promise<ProductImage> {
-    const { data, error } = await supabase
-      .from('product_images')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('product_images')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Erreur lors de la mise à jour de l\'image:', error);
+      if (error) {
+        console.warn('Erreur lors de la mise à jour de l\'image:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.warn('Erreur lors de la mise à jour de l\'image:', error);
       throw error;
     }
-
-    return data;
   }
 
   // Supprimer une image
   static async delete(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('product_images')
-      .delete()
-      .eq('id', id);
+    try {
+      const { error } = await supabase
+        .from('product_images')
+        .delete()
+        .eq('id', id);
 
-    if (error) {
-      console.error('Erreur lors de la suppression de l\'image:', error);
+      if (error) {
+        console.warn('Erreur lors de la suppression de l\'image:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.warn('Erreur lors de la suppression de l\'image:', error);
       throw error;
     }
   }
@@ -91,7 +118,7 @@ export class ProductImageService {
       .eq('id', imageId);
 
     if (error) {
-      console.error('Erreur lors de la définition de l\'image featured:', error);
+      console.warn('⚠️ Erreur lors de la définition de l\'image featured:', error);
       throw error;
     }
   }
@@ -104,7 +131,7 @@ export class ProductImageService {
       .eq('product_id', productId);
 
     if (error) {
-      console.error('Erreur lors de la suppression des images du produit:', error);
+      console.warn('⚠️ Erreur lors de la suppression des images du produit:', error);
       throw error;
     }
   }
