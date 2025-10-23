@@ -13,6 +13,8 @@ interface BarcodeScannerProps {
 
 export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const isMountedRef = useRef(true);
+  const isProcessingRef = useRef(false);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cameras, setCameras] = useState<any[]>([]);
@@ -130,15 +132,16 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       setIsScanning(true);
 
       const config = {
-        fps: 10,  // FPS réduit pour stabilité (recommandé par html5-qrcode)
-        qrbox: { width: 250, height: 150 },  // Zone fixe rectangulaire pour codes-barres
+        fps: 10,  // FPS stable pour bonne détection
+        qrbox: { width: 350, height: 200 },  // Zone agrandie pour faciliter scan
         aspectRatio: 1.777778,  // 16:9
         disableFlip: false,
-        // Améliorer la détection avec options spécifiques
+        // Configuration vidéo optimale pour codes-barres
         videoConstraints: {
-          facingMode: 'environment', // Caméra arrière
+          facingMode: 'environment',
           focusMode: 'continuous',
-          aspectRatio: 1.777778
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
         }
       };
 
@@ -148,40 +151,73 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
         cameraId,
         config,
         async (decodedText) => {
+          // Empêcher le traitement si déjà en cours ou composant démonté
+          if (isProcessingRef.current || !isMountedRef.current) {
+            console.log('⏭️ [BarcodeScanner] Détection ignorée (déjà en traitement ou démonté)');
+            return;
+          }
+          
+          isProcessingRef.current = true;
+          
           try {
             console.log('📦 [BarcodeScanner] Code détecté:', decodedText);
             
             // Vérifier que le code n'est pas vide
             if (!decodedText || decodedText.trim() === '') {
               console.warn('⚠️ [BarcodeScanner] Code vide ignoré');
+              isProcessingRef.current = false;
               return;
             }
             
-            // Arrêter immédiatement le scanner pour éviter les détections multiples
+            // Arrêter immédiatement le scanner
             console.log('🛑 [BarcodeScanner] Arrêt du scanner...');
             await stopScanning();
+            
+            // Vérifier à nouveau si le composant est toujours monté
+            if (!isMountedRef.current) {
+              console.log('⚠️ [BarcodeScanner] Composant démonté, abandon');
+              return;
+            }
             
             // Afficher le feedback de succès
             console.log('✅ [BarcodeScanner] Succès - affichage feedback');
             setScanSuccess(true);
             
-            // Attendre un court instant pour le feedback visuel puis transmettre
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Attendre un court instant pour le feedback visuel
+            await new Promise(resolve => setTimeout(resolve, 300));
             
-            console.log('📤 [BarcodeScanner] Transmission du code et fermeture');
+            // Vérifier encore une fois avant de transmettre
+            if (!isMountedRef.current) {
+              console.log('⚠️ [BarcodeScanner] Composant démonté avant transmission');
+              return;
+            }
+            
+            console.log('📤 [BarcodeScanner] Transmission du code:', decodedText);
             onScanSuccess(decodedText);
-            onClose();
+            
+            // Fermer seulement si toujours monté
+            if (isMountedRef.current) {
+              console.log('🔒 [BarcodeScanner] Fermeture du scanner');
+              onClose();
+            }
             
           } catch (error) {
-            console.error('❌ [BarcodeScanner] Erreur lors du traitement du code:', error);
-            // En cas d'erreur, essayer quand même de transmettre
+            console.error('❌ [BarcodeScanner] Erreur lors du traitement:', error);
+            
+            // Tenter de nettoyer même en cas d'erreur
             try {
               await stopScanning();
             } catch (err) {
-              console.error('Erreur stopScanning:', err);
+              console.error('❌ Erreur stopScanning:', err);
             }
-            onScanSuccess(decodedText);
-            onClose();
+            
+            // Ne transmettre que si le composant est encore monté
+            if (isMountedRef.current) {
+              onScanSuccess(decodedText);
+              onClose();
+            }
+          } finally {
+            isProcessingRef.current = false;
           }
         },
         (errorMessage) => {
@@ -325,6 +361,7 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
 
     return () => {
       isMounted = false;
+      isMountedRef.current = false;
       // Nettoyer le scanner lors du démontage
       if (scannerRef.current) {
         if (scannerRef.current.isScanning) {
