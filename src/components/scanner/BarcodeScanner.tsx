@@ -175,25 +175,29 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       console.log('📱 [BarcodeScanner] iPhone détecté:', isIPhone);
 
       const config = {
-        fps: isIPhone ? 20 : 30,  // FPS optimisé pour iPhone (20 = bon équilibre perf/qualité)
+        fps: 30,  // FPS élevé pour plus d'opportunités de scan à distance
         qrbox: function(viewfinderWidth: number, viewfinderHeight: number) {
-          // Zone très large pour faciliter la détection
-          const width = Math.floor(viewfinderWidth * 0.9);
-          const height = Math.floor(viewfinderHeight * 0.5);
+          // Zone très large (95%x60%) pour capturer de plus loin
+          const width = Math.floor(viewfinderWidth * 0.95);
+          const height = Math.floor(viewfinderHeight * 0.6);
           console.log('📐 [BarcodeScanner] Zone de scan:', width, 'x', height);
           return { width, height };
         },
         disableFlip: false,
-        // Configuration vidéo optimisée iPhone Pro Max
+        // Configuration vidéo haute résolution pour scan à distance
         videoConstraints: isIPhone ? {
           facingMode: 'environment',
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          aspectRatio: { ideal: 16/9 }
+          width: { ideal: 3840, min: 1920 },      // 4K si dispo, sinon Full HD
+          height: { ideal: 2160, min: 1080 },     // Meilleure qualité = scan + loin
+          aspectRatio: { ideal: 16/9 },
+          focusMode: { ideal: 'continuous' },     // Focus continu
+          zoom: { ideal: 1.5, max: 3 }            // Zoom léger pour portée
         } : {
           facingMode: 'environment',
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
+          width: { ideal: 3840, min: 1920 },
+          height: { ideal: 2160, min: 1080 },
+          focusMode: { ideal: 'continuous' },
+          zoom: { ideal: 1.5, max: 3 }
         },
         // Formats supportés (tous les codes-barres standards)
         formatsToSupport: [
