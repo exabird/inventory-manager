@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Search, Package, Tag, DollarSign, Calendar, Building2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,6 +51,24 @@ export default function FilterModal({
   const [activeCategory, setActiveCategory] = useState<FilterCategory>('statut');
   const [localConfig, setLocalConfig] = useState<FilterConfig>(filterConfig);
   const [searchQuery, setSearchQuery] = useState('');
+  const [priceTimeout, setPriceTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Appliquer les filtres en temps réel avec délai pour les prix
+  useEffect(() => {
+    if (priceTimeout) {
+      clearTimeout(priceTimeout);
+    }
+    
+    const timeout = setTimeout(() => {
+      onApplyFilters(localConfig);
+    }, 300); // Délai de 300ms pour éviter trop d'appels lors de la saisie
+    
+    setPriceTimeout(timeout);
+    
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [localConfig, onApplyFilters]);
 
   if (!isOpen) return null;
 
@@ -94,16 +112,13 @@ export default function FilterModal({
     }));
   };
 
-  const handleApply = () => {
-    onApplyFilters(localConfig);
-  };
-
   const handleReset = () => {
-    setLocalConfig({
+    const resetConfig = {
       categories: [],
       stockStatus: [],
       priceRange: { min: null, max: null }
-    });
+    };
+    setLocalConfig(resetConfig);
     onResetFilters();
   };
 
@@ -111,33 +126,34 @@ export default function FilterModal({
     switch (activeCategory) {
       case 'statut':
         return (
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
               <Input
                 placeholder="Rechercher..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-8 h-8 text-xs"
               />
             </div>
             
-            <div className="space-y-3">
+            <div className="space-y-2">
               {stockStatusOptions
                 .filter(option => 
                   option.label.toLowerCase().includes(searchQuery.toLowerCase())
                 )
                 .map(option => (
-                  <div key={option.id} className="flex items-center space-x-3">
+                  <div key={option.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={option.id}
                       checked={localConfig.stockStatus.includes(option.id as StockStatus)}
                       onCheckedChange={() => handleStockStatusToggle(option.id as StockStatus)}
+                      className="h-4 w-4"
                     />
                     <div className="flex-1">
                       <label 
                         htmlFor={option.id}
-                        className="text-sm font-medium text-gray-900 cursor-pointer"
+                        className="text-xs font-medium text-gray-900 cursor-pointer"
                       >
                         {option.label}
                       </label>
@@ -151,32 +167,33 @@ export default function FilterModal({
 
       case 'categorie':
         return (
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
               <Input
                 placeholder="Rechercher..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-8 h-8 text-xs"
               />
             </div>
             
-            <div className="space-y-3">
+            <div className="space-y-2 max-h-40 overflow-y-auto">
               {uniqueCategories
                 .filter(category => 
                   category.toLowerCase().includes(searchQuery.toLowerCase())
                 )
                 .map(category => (
-                  <div key={category} className="flex items-center space-x-3">
+                  <div key={category} className="flex items-center space-x-2">
                     <Checkbox
                       id={category}
                       checked={localConfig.categories.includes(category)}
                       onCheckedChange={() => handleCategoryToggle(category)}
+                      className="h-4 w-4"
                     />
                     <label 
                       htmlFor={category}
-                      className="text-sm font-medium text-gray-900 cursor-pointer"
+                      className="text-xs font-medium text-gray-900 cursor-pointer"
                     >
                       {category}
                     </label>
@@ -188,32 +205,33 @@ export default function FilterModal({
 
       case 'marque':
         return (
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
               <Input
                 placeholder="Rechercher..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-8 h-8 text-xs"
               />
             </div>
             
-            <div className="space-y-3">
+            <div className="space-y-2 max-h-40 overflow-y-auto">
               {uniqueBrands
                 .filter(brand => 
                   brand.toLowerCase().includes(searchQuery.toLowerCase())
                 )
                 .map(brand => (
-                  <div key={brand} className="flex items-center space-x-3">
+                  <div key={brand} className="flex items-center space-x-2">
                     <Checkbox
                       id={brand}
                       checked={localConfig.categories.includes(`brand:${brand}`)}
                       onCheckedChange={() => handleBrandToggle(brand)}
+                      className="h-4 w-4"
                     />
                     <label 
                       htmlFor={brand}
-                      className="text-sm font-medium text-gray-900 cursor-pointer"
+                      className="text-xs font-medium text-gray-900 cursor-pointer"
                     >
                       {brand}
                     </label>
@@ -225,15 +243,15 @@ export default function FilterModal({
 
       case 'prix':
         return (
-          <div className="space-y-4">
-            <div className="text-sm text-gray-600">
+          <div className="space-y-3">
+            <div className="text-xs text-gray-600">
               Filtrer par gamme de prix
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Prix minimum (€)
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Min (€)
                 </label>
                 <Input
                   type="number"
@@ -246,11 +264,12 @@ export default function FilterModal({
                       min: e.target.value ? parseFloat(e.target.value) : null
                     }
                   }))}
+                  className="h-8 text-xs"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Prix maximum (€)
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Max (€)
                 </label>
                 <Input
                   type="number"
@@ -263,6 +282,7 @@ export default function FilterModal({
                       max: e.target.value ? parseFloat(e.target.value) : null
                     }
                   }))}
+                  className="h-8 text-xs"
                 />
               </div>
             </div>
@@ -271,97 +291,58 @@ export default function FilterModal({
 
       default:
         return (
-          <div className="text-center py-8 text-gray-500">
-            <p>Filtre en cours de développement</p>
+          <div className="text-center py-4 text-gray-500">
+            <p className="text-xs">Filtre en cours de développement</p>
           </div>
         );
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[80vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-start justify-end pt-20 pr-4">
+      <div className="relative bg-white rounded-lg shadow-lg w-96 max-h-[80vh] flex flex-col border border-gray-200">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-lg font-semibold text-gray-900">Filtres</h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="h-8 w-8"
-          >
+        <div className="flex items-center justify-between p-3 border-b">
+          <h2 className="text-lg font-semibold">Filtres</h2>
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
             <X className="h-4 w-4" />
           </Button>
         </div>
 
-        <div className="flex h-[500px]">
-          {/* Panel gauche - Catégories */}
-          <div className="w-64 border-r bg-gray-50 p-4">
-            <div className="space-y-2">
-              {filterCategories.map(category => {
-                const Icon = category.icon;
-                const isActive = activeCategory === category.id;
-                
-                return (
-                  <button
-                    key={category.id}
-                    onClick={() => setActiveCategory(category.id as FilterCategory)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors ${
-                      isActive 
-                        ? 'bg-green-100 text-green-700 border border-green-200' 
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span className="text-sm font-medium">{category.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-            
-            <div className="mt-6 pt-4 border-t">
+        {/* Content */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left Panel - Categories */}
+          <div className="w-1/3 border-r bg-gray-50 p-2 space-y-1 overflow-y-auto">
+            {filterCategories.map(cat => (
               <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleReset}
-                className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                key={cat.id}
+                variant={activeCategory === cat.id ? 'secondary' : 'ghost'}
+                className="w-full justify-start h-8 text-xs"
+                onClick={() => setActiveCategory(cat.id as FilterCategory)}
               >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Réinitialiser tout
+                <cat.icon className="h-3 w-3 mr-2" />
+                {cat.label}
               </Button>
-            </div>
+            ))}
           </div>
 
-          {/* Panel droit - Options de filtre */}
-          <div className="flex-1 p-6">
-            <div className="h-full flex flex-col">
-              <div className="mb-4">
-                <h3 className="text-lg font-medium text-gray-900 capitalize">
-                  {filterCategories.find(c => c.id === activeCategory)?.label}
-                </h3>
-              </div>
-              
-              <div className="flex-1 overflow-y-auto">
-                {renderFilterContent()}
-              </div>
-              
-              {/* Actions */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={onClose}
-                >
-                  Effacer
-                </Button>
-                <Button
-                  onClick={handleApply}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  Filtrer
-                </Button>
-              </div>
+          {/* Right Panel - Filter Options */}
+          <div className="flex-1 p-3 overflow-y-auto">
+            <div className="mb-3">
+              <h3 className="text-sm font-medium text-gray-900 capitalize">
+                {filterCategories.find(c => c.id === activeCategory)?.label}
+              </h3>
             </div>
+            {renderFilterContent()}
           </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end p-3 border-t">
+          <Button variant="outline" size="sm" onClick={handleReset} className="h-8 text-xs">
+            <RotateCcw className="h-3 w-3 mr-1" />
+            Effacer tous les filtres
+          </Button>
         </div>
       </div>
     </div>

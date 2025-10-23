@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.1.15] - 2025-01-22
+
+### 🎨 Refonte UI/UX : Page Produits Épurée
+**Simplification majeure de l'interface pour une expérience utilisateur optimale**
+
+#### Nettoyage de l'interface :
+- ✅ **Suppression des KPIs** : Déplacés vers le dashboard dédié
+- ✅ **Suppression du branding** : Logo + nom + version déplacés dans le sidebar
+- ✅ **Suppression des marges** : Plus de conteneurs inutiles autour de la liste
+- ✅ **Suppression du fond gris** : Interface plus épurée et moderne
+
+#### Focus sur l'essentiel :
+- ✅ **Liste de produits uniquement** : Interface focalisée sur le contenu principal
+- ✅ **Filtres sticky** : Seuls les filtres restent visibles lors du scroll
+- ✅ **Plus de scroll horizontal** : Problème définitivement résolu sur mobile
+- ✅ **Layout mobile optimisé** : Adaptation parfaite aux écrans mobiles
+
+#### Améliorations techniques :
+- ✅ **Code simplifié** : Suppression des variables d'état inutiles
+- ✅ **Performance améliorée** : Moins de calculs et de rendus
+- ✅ **Maintenance facilitée** : Code plus propre et organisé
+
 ## [0.1.14] - 2025-01-22
 
 ### 🤖 Nouvelle Feature Majeure : Scraping IA et Navigation

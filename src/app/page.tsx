@@ -48,8 +48,6 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
-  const [activeFilter, setActiveFilter] = useState<'all' | 'low-stock' | 'out-of-stock' | 'in-stock'>('all');
 
   const loadProducts = useCallback(async () => {
     try {
@@ -91,25 +89,9 @@ export default function Home() {
       );
     }
 
-    // Filtre par statut de stock
-    switch (activeFilter) {
-      case 'low-stock':
-        filtered = filtered.filter(product => product.quantity > 0 && product.quantity < 5);
-        break;
-      case 'out-of-stock':
-        filtered = filtered.filter(product => product.quantity === 0);
-        break;
-      case 'in-stock':
-        filtered = filtered.filter(product => product.quantity >= 5);
-        break;
-      case 'all':
-      default:
-        // Pas de filtre supplémentaire
-        break;
-    }
 
     setFilteredProducts(filtered);
-  }, [searchQuery, products, activeFilter]);
+  }, [searchQuery, products]);
 
   const handleScanSuccess = async (barcode: string) => {
     try {
@@ -285,123 +267,10 @@ export default function Home() {
     setSuccessMessage(null);
   };
 
-  // Statistiques
-  const stats = {
-    total: products.length,
-    totalItems: products.reduce((sum, p) => sum + p.quantity, 0),
-    outOfStock: products.filter((p) => p.quantity === 0).length,
-    lowStock: products.filter((p) => p.quantity > 0 && p.quantity < 5).length,
-  };
-
-  // Debug: Log pour diagnostiquer le problème des statistiques
-  console.log('🔍 Debug statistiques:', {
-    productsTotal: products.length,
-    filteredProductsTotal: filteredProducts.length,
-    searchQuery: searchQuery,
-    totalItems: stats.totalItems
-  });
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen">
       {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <Package className="h-7 w-7 text-blue-600" />
-                Inventory Manager
-              </h1>
-              <p className="text-sm text-gray-600 mt-1">
-                Gestion intelligente de votre stock
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                Version {APP_VERSION}
-              </p>
-            </div>
-          </div>
-
-
-          {/* Statistiques */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <div className="bg-blue-50 rounded-lg p-3">
-              <p className="text-xs text-blue-600 font-medium">Total produits</p>
-              <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
-            </div>
-            <div className="bg-green-50 rounded-lg p-3">
-              <p className="text-xs text-green-600 font-medium">Total articles</p>
-              <p className="text-2xl font-bold text-green-900">{stats.totalItems}</p>
-            </div>
-            <div className="bg-orange-50 rounded-lg p-3">
-              <p className="text-xs text-orange-600 font-medium">Stock faible</p>
-              <p className="text-2xl font-bold text-orange-900">{stats.lowStock}</p>
-            </div>
-            <div className="bg-red-50 rounded-lg p-3">
-              <p className="text-xs text-red-600 font-medium">Rupture</p>
-              <p className="text-2xl font-bold text-red-900">{stats.outOfStock}</p>
-            </div>
-          </div>
-
-
-
-          {/* Filtres et contrôles de vue */}
-          <div className="flex items-center justify-between mb-4">
-            {/* Filtres de statut */}
-            <div className="flex gap-2 overflow-x-auto">
-              <Button
-                variant={activeFilter === 'all' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setActiveFilter('all')}
-                className="whitespace-nowrap"
-              >
-                Tous ({products.length})
-              </Button>
-              <Button
-                variant={activeFilter === 'in-stock' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setActiveFilter('in-stock')}
-                className="whitespace-nowrap"
-              >
-                En stock ({products.filter(p => p.quantity >= 5).length})
-              </Button>
-              <Button
-                variant={activeFilter === 'low-stock' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setActiveFilter('low-stock')}
-                className="whitespace-nowrap"
-              >
-                Stock faible ({stats.lowStock})
-              </Button>
-              <Button
-                variant={activeFilter === 'out-of-stock' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setActiveFilter('out-of-stock')}
-                className="whitespace-nowrap"
-              >
-                Rupture ({stats.outOfStock})
-              </Button>
-            </div>
-
-            {/* Contrôles de vue */}
-            <div className="flex gap-1">
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-              >
-                <List className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-              >
-                <Grid3X3 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
 
       {/* Actions flottantes (mobile-first) */}
       <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-20">
@@ -426,11 +295,20 @@ export default function Home() {
       </div>
 
       {/* Liste des produits */}
-      <div className="container mx-auto px-4 py-6 pb-24">
+      <div className="pb-24">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="h-12 w-12 animate-spin text-blue-600 mb-4" />
             <p className="text-gray-600">Chargement des produits...</p>
+            <button 
+              onClick={() => {
+                console.log('🔄 Test manuel - Rechargement des produits');
+                loadProducts();
+              }}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Recharger manuellement
+            </button>
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-20">
@@ -474,27 +352,14 @@ export default function Home() {
               )}
             </div>
 
-            {/* Affichage conditionnel selon le mode de vue */}
-            {viewMode === 'list' ? (
-              <CompactProductList
-                products={filteredProducts}
-                onProductSelect={handleSelectProduct}
-                onStockEdit={handleStockEdit}
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-              />
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filteredProducts.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    onEdit={handleSelectProduct}
-                    onQuantityChange={handleQuantityChange}
-                  />
-                ))}
-              </div>
-            )}
+            {/* Liste de produits */}
+            <CompactProductList
+              products={filteredProducts}
+              onProductSelect={handleSelectProduct}
+              onStockEdit={handleStockEdit}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+            />
           </>
         )}
       </div>
