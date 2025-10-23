@@ -29,10 +29,36 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
   const [scanSuccess, setScanSuccess] = useState(false);
   const [flashEnabled, setFlashEnabled] = useState(false);
   const [flashSupported, setFlashSupported] = useState(false);
+  const hasAutoEnabledFlash = useRef(false);
   
   // Générer un ID unique CONSTANT pour éviter les conflits
   const scannerIdRef = useRef(`scanner-${Math.random().toString(36).substr(2, 9)}`);
   const scannerId = scannerIdRef.current;
+
+  // Fonction pour jouer un bip de scan réussi
+  const playBeep = () => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 1000; // Fréquence du bip (1000 Hz)
+      oscillator.type = 'square';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.1);
+      
+      console.log('🔊 [BarcodeScanner] Bip joué');
+    } catch (error) {
+      console.error('❌ [BarcodeScanner] Erreur lecture bip:', error);
+    }
+  };
 
   // Nettoyer le scanner au démontage du composant
   useEffect(() => {
@@ -175,8 +201,8 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       console.log('📱 [BarcodeScanner] iPhone détecté:', isIPhone);
 
       const config = {
-        fps: 10,  // FPS RÉDUIT = plus de temps pour décoder chaque frame
-        // PAS de qrbox = analyse TOUTE l'image (meilleure portée)
+        fps: 10,  // FPS bas pour plus de temps de décodage
+        qrbox: { width: 280, height: 180 },  // Zone rectangulaire fixe optimale
         disableFlip: true,  // Désactiver flip pour gain de perf
         experimentalFeatures: {
           useBarCodeDetectorIfSupported: true  // API native si disponible
@@ -218,6 +244,9 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
           
           try {
             console.log('📦 [BarcodeScanner] Code détecté:', decodedText);
+            
+            // 🔊 BEEP sonore de confirmation
+            playBeep();
             
             // Vérifier que le code n'est pas vide
             if (!decodedText || decodedText.trim() === '') {
@@ -528,9 +557,9 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
     }
   };
 
-  // Vérifier le support du flash au démarrage du scan
+  // Vérifier le support du flash au démarrage du scan et l'activer auto
   useEffect(() => {
-    if (isScanning) {
+    if (isScanning && !hasAutoEnabledFlash.current) {
       // Attendre que le stream soit initialisé
       setTimeout(async () => {
         const videoElement = document.querySelector(`#${scannerId} video`) as HTMLVideoElement;
@@ -538,10 +567,23 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
           const stream = videoElement.srcObject as MediaStream;
           const track = stream.getVideoTracks()[0];
           if (track) {
+            videoTrackRef.current = track;
             const capabilities = track.getCapabilities() as any;
             if (capabilities.torch) {
               setFlashSupported(true);
               console.log('✅ [BarcodeScanner] Flash supporté !');
+              
+              // 🔦 ACTIVATION AUTOMATIQUE du flash
+              try {
+                await track.applyConstraints({
+                  advanced: [{ torch: true } as any]
+                });
+                setFlashEnabled(true);
+                hasAutoEnabledFlash.current = true;
+                console.log('⚡ [BarcodeScanner] Flash activé automatiquement !');
+              } catch (err) {
+                console.warn('⚠️ [BarcodeScanner] Impossible d\'activer le flash auto:', err);
+              }
             }
           }
         }
@@ -840,12 +882,12 @@ export default function BarcodeScanner({ onScanSuccess, onClose }: BarcodeScanne
       {!isScanning && !error && (
         <div className="absolute bottom-8 left-0 right-0 px-6">
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-white text-sm">
-            <p className="font-semibold mb-2">💡 Conseils de scan :</p>
+            <p className="font-semibold mb-2">💡 Conseils :</p>
             <ul className="space-y-1 text-white/80">
-              <li>⚡ <strong>Flash activé</strong> = portée maximale</li>
+              <li>🎯 <strong>Placez le code dans le rectangle vert</strong></li>
+              <li>⚡ Flash activé automatiquement</li>
               <li>📱 Tenez stable 2-3 secondes</li>
-              <li>🎯 Code visible = code détectable</li>
-              <li>📏 Distance optimale : 15-30cm</li>
+              <li>🔊 Un bip confirme la lecture</li>
             </ul>
           </div>
         </div>
