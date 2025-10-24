@@ -10,11 +10,6 @@ import sharp from 'sharp';
 
 export const runtime = 'nodejs'; // Pour gérer les buffers et sharp
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
 interface DownloadedImage {
   originalUrl: string;
   supabaseUrl: string;
@@ -25,6 +20,12 @@ interface DownloadedImage {
 
 export async function POST(request: NextRequest) {
   try {
+    // 🔧 Initialiser le client Supabase dans la fonction (au runtime)
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    
     const body = await request.json();
     const { imageUrls, productId } = body;
 
