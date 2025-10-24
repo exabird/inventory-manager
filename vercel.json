@@ -6,6 +6,10 @@
   "functions": {
     "src/app/api/**/*.ts": {
       "maxDuration": 30
+    },
+    "src/app/api/scrape-product-page-advanced/route.ts": {
+      "maxDuration": 60,
+      "memory": 3008
     }
   }
 }

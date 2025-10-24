@@ -40,10 +40,14 @@ export async function POST(request: NextRequest) {
     // Lancer le navigateur headless (avec Chromium sur Vercel)
     if (isProduction) {
       // Configuration pour Vercel avec @sparticuz/chromium
+      console.log('🔍 [Scraper Advanced] Récupération du chemin Chromium...');
+      const executablePath = await chromium.executablePath();
+      console.log('📁 [Scraper Advanced] Chemin Chromium:', executablePath);
+      
       browser = await puppeteer.launch({
-        args: [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
+        args: chromium.args,
         defaultViewport: { width: 1920, height: 1080 },
-        executablePath: await chromium.executablePath(),
+        executablePath: executablePath,
         headless: true,
       });
       console.log('✅ [Scraper Advanced] Chromium lancé (Vercel)');
