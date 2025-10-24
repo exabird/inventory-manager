@@ -101,115 +101,178 @@ export async function POST(request: NextRequest) {
       console.log('🖼️ [Mode Images Only] Début récupération images uniquement');
       
       let scrapedContent: any = null;
+      let debugInfo: any = {
+        step: '',
+        error: '',
+        details: {}
+      };
       
-      // Étape 1 : Trouver l'URL du produit avec l'IA
-      console.log('🌐 [Mode Images Only] Recherche de l\'URL du produit...');
-      
-      const anthropic = new Anthropic({ apiKey: apiKey });
-      
-      const urlFindingPrompt = `Trouve l'URL officielle de la page produit pour :
-Nom: ${currentData?.name || 'Non fourni'}
-Marque: ${currentData?.brand || currentData?.manufacturer || 'Non fournie'}
-Code-barres: ${currentData?.barcode || 'Non fourni'}
+      try {
+        // Étape 1 : Trouver l'URL du produit avec l'IA
+        debugInfo.step = 'url_finding';
+        console.log('🌐 [Mode Images Only] Recherche de l\'URL du produit...');
+        
+        const anthropic = new Anthropic({ apiKey: apiKey });
+        
+        // Prompt amélioré qui fonctionne sans prompt de marque
+        const urlFindingPrompt = `Tu es un expert en recherche de produits en ligne.
 
-${brandPrompt ? `\n🎯 INSTRUCTIONS SPÉCIFIQUES À LA MARQUE :\n${brandPrompt}\n` : ''}
-Retourne UNIQUEMENT l'URL complète (https://...) sans aucun texte supplémentaire.`;
+PRODUIT À RECHERCHER :
+- Nom: ${currentData?.name || 'Non fourni'}
+- Marque: ${currentData?.brand || currentData?.manufacturer || 'Non fournie'}
+- Code-barres: ${currentData?.barcode || 'Non fourni'}
 
-      // 🔍 Logger le prompt utilisé
-      if (brandPrompt) {
-        console.log('🏷️ [Mode Images Only] Prompt personnalisé de la marque utilisé');
-        console.log('📝 [Mode Images Only] Prompt:', brandPrompt.substring(0, 100) + '...');
-      } else {
-        console.log('⚠️ [Mode Images Only] Aucun prompt personnalisé de marque');
-      }
+${brandPrompt ? `\n🎯 INSTRUCTIONS SPÉCIFIQUES À LA MARQUE :\n${brandPrompt}\n` : `
+TA MISSION :
+1. Trouve l'URL de la page produit OFFICIELLE sur le site du fabricant
+2. Priorise TOUJOURS les sites officiels (.com, .fr, etc. du fabricant)
+3. Si le fabricant est connu (Sonos, Apple, Samsung, etc.), utilise leur site officiel
+4. Recherche par le nom exact du produit sur le site du fabricant
 
-      const urlResponse = await anthropic.messages.create({
-        model: model,
-        max_tokens: 500,
-        messages: [{
-          role: 'user',
-          content: urlFindingPrompt
-        }]
-      });
+EXEMPLES DE SITES OFFICIELS :
+- Sonos → sonos.com
+- Apple → apple.com
+- Samsung → samsung.com
+- Ubiquiti → ui.com ou store.ui.com
+`}
 
-      const productUrl = urlResponse.content[0].type === 'text' 
-        ? urlResponse.content[0].text.trim() 
-        : '';
-      
-      console.log('✅ [Mode Images Only] URL trouvée:', productUrl);
+IMPORTANT :
+- Retourne UNIQUEMENT l'URL complète (https://...)
+- PAS de texte supplémentaire
+- PAS d'explication
+- JUSTE l'URL`;
 
-      // Étape 2 : Scraper la page
-      if (productUrl && productUrl.startsWith('http')) {
-        try {
-          console.log('🕷️ [Mode Images Only] Scraping de la page...');
-          
-          // Utiliser le scraper avancé (Puppeteer) pour les pages avec JavaScript
-          const scrapeResponse = await fetch(`${request.nextUrl.origin}/api/scrape-product-page-advanced`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: productUrl })
-          });
-
-          if (scrapeResponse.ok) {
-            const scrapeData = await scrapeResponse.json();
-            scrapedContent = scrapeData; // Le scraper avancé retourne directement les données
-            console.log('✅ [Mode Images Only] Page scrapée avec succès');
-            console.log('🖼️ [Mode Images Only] Images trouvées:', scrapedContent.images.length);
-
-            // Étape 3 : Télécharger les images dans Supabase
-            if (scrapedContent.images && scrapedContent.images.length > 0 && currentData?.id) {
-              console.log('📥 [Mode Images Only] Téléchargement des images vers Supabase...');
-              
-              try {
-                const downloadResponse = await fetch(`${request.nextUrl.origin}/api/download-images`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ 
-                    imageUrls: scrapedContent.images,
-                    productId: currentData.id
-                  })
-                });
-
-                if (downloadResponse.ok) {
-                  const downloadData = await downloadResponse.json();
-                  console.log(`✅ [Mode Images Only] Images uploadées: ${downloadData.successCount}/${downloadData.totalCount}`);
-                  
-                  // Préparer la liste des URLs Supabase
-                  if (downloadData.results && downloadData.results.length > 0) {
-                    const supabaseImages = downloadData.results
-                      .filter((r: any) => r.success)
-                      .map((r: any) => r.supabaseUrl);
-                    
-                    console.log('✅ [Mode Images Only] Retour des URLs Supabase:', supabaseImages.length);
-                    
-                    // Retourner directement les URLs
-                    return NextResponse.json({
-                      success: true,
-                      data: {},
-                      aiGenerated: false,
-                      scrapingUsed: true,
-                      supabaseImages: supabaseImages,
-                      timestamp: new Date().toISOString()
-                    });
-                  }
-                }
-              } catch (downloadError) {
-                console.error('⚠️ [Mode Images Only] Erreur téléchargement images:', downloadError);
-              }
-            }
-          }
-        } catch (scrapeError) {
-          console.error('⚠️ [Mode Images Only] Erreur scraping:', scrapeError);
+        // 🔍 Logger le prompt utilisé
+        debugInfo.details.promptType = brandPrompt ? 'custom' : 'standard';
+        if (brandPrompt) {
+          console.log('🏷️ [Mode Images Only] ✅ Prompt personnalisé de la marque utilisé');
+          console.log('📝 [Mode Images Only] Extrait:', brandPrompt.substring(0, 150) + '...');
+        } else {
+          console.log('🔍 [Mode Images Only] Prompt standard utilisé (recherche intelligente)');
         }
+
+        const urlResponse = await anthropic.messages.create({
+          model: model,
+          max_tokens: 500,
+          messages: [{
+            role: 'user',
+            content: urlFindingPrompt
+          }]
+        });
+
+        const productUrl = urlResponse.content[0].type === 'text' 
+          ? urlResponse.content[0].text.trim() 
+          : '';
+        
+        debugInfo.details.urlFound = productUrl;
+        console.log('✅ [Mode Images Only] URL trouvée par l\'IA:', productUrl);
+        
+        // Validation de l'URL
+        if (!productUrl || !productUrl.startsWith('http')) {
+          debugInfo.error = 'URL invalide ou non trouvée par l\'IA';
+          debugInfo.details.urlReceived = productUrl;
+          throw new Error(`L'IA n'a pas trouvé d'URL valide. Réponse reçue: "${productUrl}"`);
+        }
+
+        // Étape 2 : Scraper la page
+        debugInfo.step = 'scraping';
+        console.log('🕷️ [Mode Images Only] Scraping de la page:', productUrl);
+        
+        // Utiliser le scraper avancé (Puppeteer) pour les pages avec JavaScript
+        const scrapeResponse = await fetch(`${request.nextUrl.origin}/api/scrape-product-page-advanced`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: productUrl })
+        });
+
+        if (!scrapeResponse.ok) {
+          const errorText = await scrapeResponse.text();
+          debugInfo.error = 'Échec du scraping';
+          debugInfo.details.scrapeStatus = scrapeResponse.status;
+          debugInfo.details.scrapeError = errorText;
+          throw new Error(`Scraping échoué (${scrapeResponse.status}): ${errorText}`);
+        }
+
+        const scrapeData = await scrapeResponse.json();
+        scrapedContent = scrapeData;
+        debugInfo.details.imagesFound = scrapedContent.images?.length || 0;
+        
+        console.log('✅ [Mode Images Only] Page scrapée avec succès');
+        console.log('🖼️ [Mode Images Only] Images trouvées:', scrapedContent.images?.length || 0);
+
+        if (!scrapedContent.images || scrapedContent.images.length === 0) {
+          debugInfo.error = 'Aucune image trouvée sur la page';
+          debugInfo.details.pageTitle = scrapeData.title || 'Inconnu';
+          throw new Error(`Aucune image trouvée sur la page scrapée. Titre de la page: "${scrapeData.title || 'Inconnu'}"`);
+        }
+
+        // Étape 3 : Télécharger les images dans Supabase
+        if (!currentData?.id) {
+          debugInfo.error = 'ID produit manquant';
+          throw new Error('Impossible de télécharger les images: ID produit manquant');
+        }
+
+        debugInfo.step = 'downloading';
+        console.log('📥 [Mode Images Only] Téléchargement de', scrapedContent.images.length, 'images vers Supabase...');
+        
+        const downloadResponse = await fetch(`${request.nextUrl.origin}/api/download-images`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            imageUrls: scrapedContent.images,
+            productId: currentData.id
+          })
+        });
+
+        if (!downloadResponse.ok) {
+          const errorText = await downloadResponse.text();
+          debugInfo.error = 'Échec du téléchargement';
+          debugInfo.details.downloadError = errorText;
+          throw new Error(`Téléchargement échoué: ${errorText}`);
+        }
+
+        const downloadData = await downloadResponse.json();
+        debugInfo.details.imagesUploaded = downloadData.successCount;
+        debugInfo.details.imagesFailed = downloadData.totalCount - downloadData.successCount;
+        
+        console.log(`✅ [Mode Images Only] Images uploadées: ${downloadData.successCount}/${downloadData.totalCount}`);
+        
+        // Préparer la liste des URLs Supabase
+        if (downloadData.results && downloadData.results.length > 0) {
+          const supabaseImages = downloadData.results
+            .filter((r: any) => r.success)
+            .map((r: any) => r.supabaseUrl);
+          
+          console.log('✅ [Mode Images Only] Retour des URLs Supabase:', supabaseImages.length);
+          
+          // Retourner directement les URLs
+          return NextResponse.json({
+            success: true,
+            data: {},
+            aiGenerated: false,
+            scrapingUsed: true,
+            supabaseImages: supabaseImages,
+            debugInfo: debugInfo,
+            timestamp: new Date().toISOString()
+          });
+        } else {
+          debugInfo.error = 'Aucune image téléchargée avec succès';
+          throw new Error('Toutes les images ont échoué lors du téléchargement');
+        }
+        
+      } catch (error: any) {
+        console.error('❌ [Mode Images Only] Erreur:', error.message);
+        console.error('🔍 [Mode Images Only] Debug info:', debugInfo);
+        
+        // Retourner une erreur détaillée
+        return NextResponse.json({
+          success: false,
+          error: error.message || 'Erreur lors de la récupération des images',
+          debugInfo: debugInfo,
+          supabaseImages: [],
+          timestamp: new Date().toISOString()
+        }, { status: 400 });
       }
-      
-      // Si on arrive ici, aucune image n'a été trouvée
-      return NextResponse.json({
-        success: false,
-        error: 'Aucune image trouvée ou erreur lors du scraping',
-        supabaseImages: [],
-        timestamp: new Date().toISOString()
-      });
     }
     
     // Initialiser le client Anthropic pour les autres modes

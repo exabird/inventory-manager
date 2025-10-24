@@ -540,16 +540,33 @@ export default function ImageUploader({
 
       {/* Feedback visuel après récupération IA */}
       {imagesFeedback && (
-        <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3 animate-fade-in">
+        <div className={`mt-3 p-3 rounded-lg flex items-start gap-3 animate-fade-in ${
+          imagesFeedback.count > 0 
+            ? 'bg-green-50 border border-green-200' 
+            : 'bg-red-50 border border-red-200'
+        }`}>
           <div className="flex-shrink-0 mt-0.5">
-            <Sparkles className="h-4 w-4 text-green-600" />
+            {imagesFeedback.count > 0 ? (
+              <Sparkles className="h-4 w-4 text-green-600" />
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-green-900">
+            <p className={`text-sm font-medium whitespace-pre-line ${
+              imagesFeedback.count > 0 ? 'text-green-900' : 'text-red-900'
+            }`}>
               {imagesFeedback.message}
             </p>
-            <p className="text-xs text-green-700 mt-1">
-              {imagesFeedback.count} image(s) • {imagesFeedback.size}
+            <p className={`text-xs mt-1 ${
+              imagesFeedback.count > 0 ? 'text-green-700' : 'text-red-700'
+            }`}>
+              {imagesFeedback.count > 0 
+                ? `${imagesFeedback.count} image(s) • ${imagesFeedback.size}` 
+                : imagesFeedback.size
+              }
             </p>
           </div>
         </div>

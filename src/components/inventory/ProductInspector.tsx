@@ -971,7 +971,21 @@ export default function ProductInspector({
       });
       
       if (!response.ok) {
-        throw new Error('Erreur lors de l\'appel à l\'API IA');
+        const errorData = await response.json();
+        console.error('❌ [IA Images] Erreur API:', errorData);
+        
+        // Construire un message d'erreur détaillé
+        let errorMessage = errorData.error || 'Erreur lors de l\'appel à l\'API IA';
+        if (errorData.debugInfo) {
+          const debug = errorData.debugInfo;
+          errorMessage += `\n\nÉtape: ${debug.step || 'Inconnue'}`;
+          if (debug.details) {
+            if (debug.details.urlFound) errorMessage += `\nURL trouvée: ${debug.details.urlFound}`;
+            if (debug.details.imagesFound !== undefined) errorMessage += `\nImages trouvées: ${debug.details.imagesFound}`;
+            if (debug.details.pageTitle) errorMessage += `\nTitre de la page: ${debug.details.pageTitle}`;
+          }
+        }
+        throw new Error(errorMessage);
       }
       
       const result = await response.json();
@@ -1096,12 +1110,27 @@ export default function ProductInspector({
           setImagesFeedback(null);
         }, 5000);
       } else {
-        alert('⚠️ Aucune image trouvée sur le site du fabricant');
+        // Afficher un message d'erreur détaillé
+        setImagesFeedback({
+          message: 'Aucune image trouvée',
+          count: 0,
+          size: 'Vérifiez les logs pour plus de détails'
+        });
+        setTimeout(() => setImagesFeedback(null), 8000);
       }
       
     } catch (error: any) {
       console.error('❌ [IA Images] Erreur:', error);
-      alert(`Erreur lors de la récupération des images: ${error.message}`);
+      
+      // Afficher l'erreur dans l'UI au lieu d'un alert
+      setImagesFeedback({
+        message: error.message || 'Erreur inconnue',
+        count: 0,
+        size: 'Voir console (F12) pour détails'
+      });
+      
+      // Masquer après 10 secondes
+      setTimeout(() => setImagesFeedback(null), 10000);
     } finally {
       setIsAILoadingImages(false);
     }
