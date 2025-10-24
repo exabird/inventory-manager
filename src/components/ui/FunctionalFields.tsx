@@ -33,7 +33,7 @@ export function FieldWrapper({
   return (
     <div className={`space-y-2 ${className}`}>
       <div className="flex items-center gap-2">
-        <Label htmlFor={htmlFor}>
+        <Label htmlFor={htmlFor} className="text-sm font-medium text-gray-700">
           {label}
         </Label>
         {status && !isFunctional && (
@@ -77,7 +77,7 @@ export function FunctionalInput({
     >
       <Input
         {...props}
-        className={`${className} ${!isFunctional ? 'border-blue-300 bg-blue-50' : ''} ${error ? 'border-red-500' : ''}`}
+        className={`h-10 ${className} ${!isFunctional ? 'border-blue-300 bg-blue-50' : ''} ${error ? 'border-red-500' : ''}`}
       />
       {error && (
         <p className="text-sm text-red-600">{error}</p>

@@ -6,7 +6,8 @@ import {
   LayoutDashboard, 
   Settings, 
   BarChart3,
-  Wrench 
+  Wrench,
+  Building2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -32,6 +33,12 @@ const navItems: NavItem[] = [
     label: 'Produits',
     icon: <Package className="h-5 w-5" />,
     href: '/'
+  },
+  {
+    id: 'brands',
+    label: 'Marques',
+    icon: <Building2 className="h-5 w-5" />,
+    href: '/brands'
   },
   {
     id: 'reports',

@@ -26,6 +26,97 @@ export const supabaseAdmin = serviceRoleKey &&
   ? createClient(supabaseUrl, serviceRoleKey)
   : null;
 
+// Types pour les spécifications techniques normalisées
+export interface TechnicalSpecifications {
+  // Électronique / Informatique
+  processor?: string;
+  ram_gb?: number;
+  storage_gb?: number;
+  storage_type?: string;
+  graphics_card?: string;
+  screen_size_inches?: number;
+  resolution?: string;
+  refresh_rate_hz?: number;
+  panel_type?: string;
+  
+  // Connectivité
+  hdmi_ports?: number;
+  displayport_ports?: number;
+  usb_ports?: number;
+  usb_type_c_ports?: number;
+  ethernet_ports?: number;
+  ethernet_port?: string;
+  audio_jack?: boolean;
+  wifi?: string;
+  bluetooth?: string;
+  nfc?: boolean;
+  
+  // Alimentation
+  power_watts?: number;
+  power_output_watts?: number;
+  voltage?: string;
+  battery_capacity_mah?: number;
+  battery_life_hours?: number;
+  battery_type?: string;
+  charging_port?: string;
+  
+  // Dimensions
+  weight_kg?: number;
+  weight_g?: number;
+  width_mm?: number;
+  height_mm?: number;
+  depth_mm?: number;
+  dimensions_mm?: { width: number; height: number; depth: number };
+  volume_liters?: number;
+  
+  // Audio
+  frequency_response?: string;
+  audio_formats?: string;
+  audio_inputs?: string;
+  voice_assistants?: string;
+  
+  // Design
+  color?: string;
+  material?: string;
+  finish?: string;
+  touch_controls?: string;
+  humidity_resistant?: string;
+  
+  // Performance
+  brightness_nits?: number;
+  contrast_ratio?: string;
+  response_time_ms?: number;
+  color_gamut?: string;
+  dpi?: number;
+  
+  // Certifications
+  certifications?: string[];
+  energy_rating?: string;
+  ip_rating?: string;
+  
+  // Garantie & Compatibilité
+  warranty_months?: number;
+  warranty_type?: string;
+  compatibility?: string[];
+  requires_adapter?: boolean;
+  
+  // Caractéristiques booléennes
+  rgb_lighting?: boolean;
+  wireless?: boolean;
+  rechargeable?: boolean;
+  waterproof?: boolean;
+  ergonomic?: boolean;
+  height_adjustable?: boolean;
+  pivot?: boolean;
+  tilt?: boolean;
+  
+  // Système
+  operating_system?: string;
+  
+  // Autres champs flexibles
+  [key: string]: string | number | boolean | string[] | Record<string, number> | undefined;
+}
+
 // Types pour la base de données
 export interface Product {
   id: string;
@@ -42,13 +133,17 @@ export interface Product {
   updated_at: string;
   // Nouveaux champs ajoutés
   manufacturer_ref: string | null;
-  brand: string | null;
+  brand: string | null; // Deprecated: Utiliser brand_id
+  brand_id: string | null; // FK vers brands
   short_description: string | null;
   selling_price_htva: number | null;
   purchase_price_htva: number | null;
   warranty_period: string | null;
   min_stock_required: boolean | null;
   min_stock_quantity: number | null;
+  // Description et spécifications techniques
+  long_description: string | null;
+  technical_specifications: TechnicalSpecifications | null;
 }
 
 export interface Category {
@@ -56,6 +151,21 @@ export interface Category {
   name: string;
   description: string | null;
   created_at: string;
+}
+
+// Interface pour les marques
+export interface Brand {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  description: string | null;
+  website: string | null;
+  // 🤖 Instructions IA pour le fetch
+  ai_fetch_prompt: string | null;
+  ai_fetch_instructions: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ProductHistory {

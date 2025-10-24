@@ -38,16 +38,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import AILabelWithButton from '@/components/ui/AILabelWithButton';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import RichTextEditor from '@/components/ui/RichTextEditor';
-import { Product, Category, TechnicalSpecifications, Brand } from '@/lib/supabase';
-import { CategoryService, BrandService } from '@/lib/services';
+import { Product, Category, TechnicalSpecifications } from '@/lib/supabase';
+import { CategoryService } from '@/lib/services';
 import Tabs, { TabContent } from '@/components/ui/Tabs';
 import ImageUploader from '@/components/inventory/ImageUploaderSquare';
 import BarcodeScanner from '@/components/scanner/BarcodeScanner';
@@ -56,7 +49,6 @@ import { ProductImage, ProductImageService } from '@/lib/productImageService';
 import { ProductDetectionService } from '@/lib/productDetectionService';
 import StockTab from '@/components/inventory/StockTab';
 import TechnicalSpecsEditor from '@/components/inventory/TechnicalSpecsEditor';
-import AIAutoFillButton, { AIFillStep } from '@/components/ui/AIAutoFillButton';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -79,8 +71,7 @@ interface ProductFormData {
   notes: string | null;
   // Nouvelles données essentielles
   manufacturer_ref: string | null;
-  brand: string | null; // Deprecated: Utiliser brand_id
-  brand_id: string | null; // 🆕 FK vers brands
+  brand: string | null;
   short_description: string | null;
   selling_price_htva: number | null;
   purchase_price_htva: number | null;
@@ -121,7 +112,6 @@ interface ProductInspectorProps {
   onDelete?: (id: string) => Promise<void>;
   onClose: () => void;
   isLoading?: boolean;
-  onThumbnailChange?: () => void; // 🆕 Notifier le parent quand la miniature change
 }
 
 export default function ProductInspector({
@@ -131,25 +121,9 @@ export default function ProductInspector({
   onDelete,
   onClose,
   isLoading = false,
-  onThumbnailChange, // 🆕 Callback pour notifier les changements de miniature
 }: ProductInspectorProps) {
-  // 🆕 Générer un UUID pour les nouveaux produits (sans ID)
-  const [productId] = useState<string>(() => {
-    if (product?.id) return product.id;
-    // Générer un UUID v4
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
-  });
-  
-  const [isNewProduct] = useState(!product?.id); // 🆕 Mode création si pas d'ID
-  
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-  const [brands, setBrands] = useState<Brand[]>([]); // 🆕 Liste des marques
-  const [isLoadingBrands, setIsLoadingBrands] = useState(true); // 🆕 État de chargement
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('favorites');
   const [images, setImages] = useState<ProductImage[]>([]);
@@ -157,10 +131,6 @@ export default function ProductInspector({
   const [hasChanges, setHasChanges] = useState(false);
   const [initialFormData, setInitialFormData] = useState<ProductFormData | null>(null);
   const [showImageGallery, setShowImageGallery] = useState(false);
-  
-  // État pour la progression du fetch IA complet
-  const [aiStep, setAiStep] = useState<AIFillStep>('idle');
-  const [completeSummary, setCompleteSummary] = useState<{ images: number; metas: number }>();
   const [formData, setFormData] = useState<ProductFormData>({
     barcode: barcode || product?.barcode || '',
     name: product?.name || '',
@@ -172,7 +142,6 @@ export default function ProductInspector({
     notes: product?.notes || '',
         manufacturer_ref: product?.manufacturer_ref || '',
         brand: product?.brand || '',
-        brand_id: product?.brand_id || null, // 🆕 ID de la marque
         short_description: product?.short_description || '',
         selling_price_htva: product?.selling_price_htva || null,
         purchase_price_htva: product?.purchase_price_htva || null,
@@ -211,24 +180,7 @@ export default function ProductInspector({
   const [isAILoadingImages, setIsAILoadingImages] = useState(false);
   const [imagesFeedback, setImagesFeedback] = useState<{ message: string; count: number; size: string } | null>(null);
   const [thumbnailRefresh, setThumbnailRefresh] = useState(0);
-
-  // 🆕 Fonction pour notifier les changements de miniature (local + parent)
-  const notifyThumbnailChange = () => {
-    setThumbnailRefresh(prev => prev + 1);
-    if (onThumbnailChange) {
-      onThumbnailChange();
-    }
-  };
   const [newImageIds, setNewImageIds] = useState<Set<string>>(new Set());
-
-  // 🆕 Initialiser initialFormData au montage avec une copie profonde
-  useEffect(() => {
-    if (!initialFormData) {
-      const deepCopy = JSON.parse(JSON.stringify(formData));
-      setInitialFormData(deepCopy);
-      console.log('✅ [ProductInspector] initialFormData initialisé');
-    }
-  }, []);
 
   // Charger les catégories
   useEffect(() => {
@@ -247,164 +199,87 @@ export default function ProductInspector({
     loadCategories();
   }, []);
 
-  // 🆕 Charger les marques
+  // Charger les images du produit
   useEffect(() => {
-    const loadBrands = async () => {
-      try {
-        setIsLoadingBrands(true);
-        const brandsData = await BrandService.getAll();
-        setBrands(brandsData);
-        console.log('✅ [ProductInspector] Marques chargées:', brandsData.length);
-      } catch (error) {
-        console.warn('⚠️ [ProductInspector] Erreur chargement marques:', error);
-        setBrands([]);
-      } finally {
-        setIsLoadingBrands(false);
-      }
-    };
-    loadBrands();
-  }, []);
-
-  // 🔄 Polling : Recharger les images depuis la BDD toutes les 2 secondes
-  // ⚠️ UNIQUEMENT pendant un fetch IA actif
-  useEffect(() => {
-    // Ne rien charger si nouveau produit (pas encore créé)
-    if (isNewProduct) return;
-    
-    // Ne recharger que pendant un fetch IA actif
-    const isAIActive = aiStep !== 'idle' && aiStep !== 'complete' && aiStep !== 'error';
-    if (!isAIActive) {
-      return;
-    }
-    
     const loadProductImages = async () => {
-      try {
-        const productImages = await ProductImageService.getByProductId(productId);
-        
-        // Trier les images par date de création (plus récentes en premier)
-        const sortedImages = productImages.sort((a, b) => {
-          const dateA = new Date(a.created_at).getTime();
-          const dateB = new Date(b.created_at).getTime();
-          return dateB - dateA; // Ordre décroissant (plus récent d'abord)
-        });
-        
-        // Ne mettre à jour que si le nombre d'images a changé
-        if (sortedImages.length !== images.length) {
-          console.log('🔄 [ProductInspector] Mise à jour images:', sortedImages.length);
-          setImages(sortedImages);
-        }
-      } catch (error) {
-        console.error('❌ [ProductInspector] Erreur chargement images:', error);
-      }
-    };
-    
-    // Charger immédiatement
-    loadProductImages();
-    
-    // Puis toutes les 2 secondes
-    const interval = setInterval(loadProductImages, 2000);
-    
-    return () => clearInterval(interval);
-  }, [productId, images.length, aiStep, isNewProduct]);
-
-  // 🔄 Polling : Recharger le produit depuis la BDD toutes les 2 secondes
-  // ⚠️ UNIQUEMENT pendant un fetch IA ET si pas de modifications en cours
-  useEffect(() => {
-    // Ne rien charger si nouveau produit (pas encore créé)
-    if (isNewProduct) return;
-    
-    // Ne pas recharger si l'utilisateur a des modifications non sauvegardées
-    if (hasChanges) {
-      console.log('⏸️ [ProductInspector] Polling désactivé : modifications en cours');
-      return;
-    }
-    
-    // Ne recharger que pendant un fetch IA actif
-    const isAIActive = aiStep !== 'idle' && aiStep !== 'complete' && aiStep !== 'error';
-    if (!isAIActive) {
-      return;
-    }
-    
-    const reloadProduct = async () => {
-      try {
-        const { ProductService } = await import('@/lib/services');
-        const freshProduct = await ProductService.getById(productId);
-        
-        if (freshProduct) {
-          console.log('🔄 [ProductInspector] Mise à jour temps réel:', freshProduct.name);
-          const initialData = {
-            barcode: freshProduct.barcode || '',
-            name: freshProduct.name || '',
-            manufacturer: freshProduct.manufacturer || '',
-            internal_ref: freshProduct.internal_ref || '',
-            quantity: freshProduct.quantity || 0,
-            category_id: freshProduct.category_id || '',
-            image_url: freshProduct.image_url || '',
-            notes: freshProduct.notes || '',
-            manufacturer_ref: freshProduct.manufacturer_ref || '',
-            brand: freshProduct.brand || '',
-            brand_id: freshProduct.brand_id || null,
-            short_description: freshProduct.short_description || '',
-            selling_price_htva: freshProduct.selling_price_htva || null,
-            purchase_price_htva: freshProduct.purchase_price_htva || null,
-            warranty_period: freshProduct.warranty_period || '',
-            min_stock_required: freshProduct.min_stock_required || false,
-            min_stock_quantity: freshProduct.min_stock_quantity || 0,
-            long_description: freshProduct.long_description || '',
-            technical_specifications: freshProduct.technical_specifications || null,
-            metadata: {
-              supplier: (freshProduct.metadata as any)?.supplier || '',
-              location: (freshProduct.metadata as any)?.location || '',
-              weight: (freshProduct.metadata as any)?.weight || null,
-              dimensions: (freshProduct.metadata as any)?.dimensions || '',
-              expiration_date: (freshProduct.metadata as any)?.expiration_date || '',
-              sku: (freshProduct.metadata as any)?.sku || '',
-              tags: (freshProduct.metadata as any)?.tags || [],
-              color: (freshProduct.metadata as any)?.color || '',
-              material: (freshProduct.metadata as any)?.material || '',
-              certifications: (freshProduct.metadata as any)?.certifications || '',
-              manufacturing_date: (freshProduct.metadata as any)?.manufacturing_date || '',
-              warranty_duration: (freshProduct.metadata as any)?.warranty_duration || '',
-              stock_date: (freshProduct.metadata as any)?.stock_date || '',
-              website: (freshProduct.metadata as any)?.website || '',
-              external_links: (freshProduct.metadata as any)?.external_links || '',
-              seo_keywords: (freshProduct.metadata as any)?.seo_keywords || '',
-              price_history: (freshProduct.metadata as any)?.price_history || [],
-              stock_history: (freshProduct.metadata as any)?.stock_history || [],
-              internal_notes: (freshProduct.metadata as any)?.internal_notes || '',
-            },
-          };
+      if (product?.id) {
+        try {
+          console.log('📸 [ProductInspector] Chargement des images pour:', product.name);
+          const productImages = await ProductImageService.getByProductId(product.id);
           
-          // ⚠️ IMPORTANT : Créer deux copies profondes distinctes
-          const formDataCopy = JSON.parse(JSON.stringify(initialData));
-          const initialDataCopy = JSON.parse(JSON.stringify(initialData));
-          setFormData(formDataCopy);
-          setInitialFormData(initialDataCopy);
-          setHasChanges(false);
+          // Trier les images par date de création (plus récentes en premier)
+          const sortedImages = productImages.sort((a, b) => {
+            const dateA = new Date(a.created_at).getTime();
+            const dateB = new Date(b.created_at).getTime();
+            return dateB - dateA; // Ordre décroissant (plus récent d'abord)
+          });
+          
+          setImages(sortedImages);
+          console.log('✅ [ProductInspector] Images chargées et triées:', sortedImages.length);
+        } catch (error) {
+          console.error('❌ [ProductInspector] Erreur chargement images:', error);
+          setImages([]);
         }
-      } catch (error) {
-        console.error('❌ [ProductInspector] Erreur reload:', error);
       }
     };
-    
-    // Recharger immédiatement
-    reloadProduct();
-    
-    // Puis toutes les 2 secondes
-    const interval = setInterval(reloadProduct, 2000);
-    
-    return () => clearInterval(interval);
-  }, [productId, hasChanges, aiStep, isNewProduct]);
+    loadProductImages();
+  }, [product?.id]);
+
+  // Mettre à jour formData quand le produit change
+  useEffect(() => {
+    if (product) {
+      const initialData = {
+        barcode: product.barcode || '',
+        name: product.name || '',
+        manufacturer: product.manufacturer || '',
+        internal_ref: product.internal_ref || '',
+        quantity: product.quantity || 0,
+        category_id: product.category_id || '',
+        image_url: product.image_url || '',
+        notes: product.notes || '',
+        manufacturer_ref: product.manufacturer_ref || '',
+        brand: product.brand || '',
+        short_description: product.short_description || '',
+        selling_price_htva: product.selling_price_htva || null,
+        purchase_price_htva: product.purchase_price_htva || null,
+        warranty_period: product.warranty_period || '',
+        min_stock_required: product.min_stock_required || false,
+        min_stock_quantity: product.min_stock_quantity || 0,
+        long_description: product.long_description || '',
+        technical_specifications: product.technical_specifications || null,
+        metadata: {
+          supplier: (product.metadata as any)?.supplier || '',
+          location: (product.metadata as any)?.location || '',
+          weight: (product.metadata as any)?.weight || null,
+          dimensions: (product.metadata as any)?.dimensions || '',
+          expiration_date: (product.metadata as any)?.expiration_date || '',
+          sku: (product.metadata as any)?.sku || '',
+          tags: (product.metadata as any)?.tags || [],
+          color: (product.metadata as any)?.color || '',
+          material: (product.metadata as any)?.material || '',
+          certifications: (product.metadata as any)?.certifications || '',
+          manufacturing_date: (product.metadata as any)?.manufacturing_date || '',
+          warranty_duration: (product.metadata as any)?.warranty_duration || '',
+          stock_date: (product.metadata as any)?.stock_date || '',
+          website: (product.metadata as any)?.website || '',
+          external_links: (product.metadata as any)?.external_links || '',
+          seo_keywords: (product.metadata as any)?.seo_keywords || '',
+          price_history: (product.metadata as any)?.price_history || [],
+          stock_history: (product.metadata as any)?.stock_history || [],
+          internal_notes: (product.metadata as any)?.internal_notes || '',
+        },
+      };
+      
+      setFormData(initialData);
+      setInitialFormData(initialData);
+      setHasChanges(false);
+    }
+  }, [product]);
 
   // Détecter les modifications en temps réel
   useEffect(() => {
     if (initialFormData) {
       const hasModifications = checkForChanges(formData);
-      console.log('🔍 [checkForChanges] Détection:', {
-        hasModifications,
-        formData: JSON.stringify(formData).substring(0, 100),
-        initialFormData: JSON.stringify(initialFormData).substring(0, 100)
-      });
       setHasChanges(hasModifications);
     }
   }, [formData, initialFormData]);
@@ -451,7 +326,7 @@ export default function ProductInspector({
     // Comparer les champs principaux
     const mainFields: (keyof ProductFormData)[] = [
       'barcode', 'name', 'manufacturer', 'internal_ref', 'quantity',
-      'category_id', 'image_url', 'notes', 'manufacturer_ref', 'brand', 'brand_id',
+      'category_id', 'image_url', 'notes', 'manufacturer_ref', 'brand',
       'short_description', 'selling_price_htva', 'purchase_price_htva', 'warranty_period',
       'long_description'
     ];
@@ -567,216 +442,7 @@ export default function ProductInspector({
   };
 
   /**
-   * 🚀 FONCTION AUTO-FILL COMPLÈTE (Métadonnées + Images)
-   * Identique à la fonction de la liste avec progression
-   */
-  const handleAIAutoFill = async () => {
-    // 🆕 Vérifier qu'il y a au moins un nom
-    if (!formData.name || formData.name.trim() === '') {
-      alert('⚠️ Veuillez saisir au moins un nom de produit pour lancer le fetch IA.');
-      return;
-    }
-    
-    try {
-      setAiStep('starting');
-      console.log('🎨 [AI Auto-Fill Inspector] Début:', formData.name);
-      
-      // Récupérer les paramètres AI
-      const savedSettings = localStorage.getItem('ai_settings');
-      let apiKey = null;
-      let model = 'claude-sonnet-4-20250514';
-      
-      if (savedSettings) {
-        const settings = JSON.parse(savedSettings);
-        apiKey = settings.claudeApiKey;
-        model = settings.model || model;
-      }
-
-      if (!apiKey) {
-        alert('⚠️ Clé API Anthropic non configurée. Allez dans Paramètres.');
-        throw new Error('API key not configured');
-      }
-
-      // 1. Métadonnées
-      setAiStep('fetching_metadata');
-      console.log('📝 [AI Auto-Fill] Étape 1/2 : Métadonnées...');
-      
-      const metaResponse = await fetch('/api/ai-fill', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productData: {
-            id: productId, // 🆕 UUID généré ou existant
-            name: formData.name,
-            brand: formData.brand,
-            brand_id: formData.brand_id, // 🆕 ID de la marque pour prompt personnalisé
-            manufacturer: formData.manufacturer,
-            barcode: formData.barcode,
-            manufacturer_ref: formData.manufacturer_ref
-          },
-          apiKey,
-          model
-        })
-      });
-
-      if (!metaResponse.ok) {
-        throw new Error('Erreur lors du remplissage des métadonnées');
-      }
-
-      const metaData = await metaResponse.json();
-      console.log('✅ [AI Auto-Fill] Métadonnées récupérées');
-
-      // 2. Images
-      setAiStep('scraping_images');
-      console.log('📸 [AI Auto-Fill] Étape 2/2 : Images...');
-      
-      const imagesResponse = await fetch('/api/ai-fill', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productData: {
-            id: productId,
-            name: formData.name,
-            brand: formData.brand,
-            brand_id: formData.brand_id, // 🆕 ID de la marque pour prompt personnalisé
-            manufacturer: formData.manufacturer,
-            barcode: formData.barcode
-          },
-          apiKey,
-          model,
-          targetField: 'images',
-          mode: 'images_only'
-        })
-      });
-
-      if (!imagesResponse.ok) {
-        throw new Error('Erreur lors de la récupération des images');
-      }
-
-      await imagesResponse.json();
-      console.log('✅ [AI Auto-Fill] Images récupérées');
-
-      // 3. Classification
-      setAiStep('classifying_images');
-      console.log('🎨 [AI Auto-Fill] Classification...');
-
-      // Recharger les images
-      let allImages = await ProductImageService.getByProductId(productId);
-
-      // Classifier avec l'IA (toutes les images sans filtre lors du fetch auto)
-      if (allImages.length > 0) {
-        console.log(`🎨 [AI Auto-Fill] Classification de ${allImages.length} images...`);
-        
-        const classifyResponse = await fetch('/api/classify-images', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            imageUrls: allImages.map(img => img.url), // ✅ Envoyer URLs uniquement
-            productName: formData.name,
-            apiKey,
-            model,
-            filterType: 'all' // Pas de filtre lors du fetch auto, on garde toutes les images
-          })
-        });
-
-        if (classifyResponse.ok) {
-          const classifyData = await classifyResponse.json();
-          console.log('✅ [AI Auto-Fill] Classification reçue:', classifyData.analyses?.length, 'analyses');
-          
-          // Mettre à jour les types (mapper par index)
-          if (classifyData.analyses && Array.isArray(classifyData.analyses)) {
-            for (const analysis of classifyData.analyses) {
-              try {
-                const imageIndex = analysis.index;
-                const image = allImages[imageIndex];
-                
-                if (image) {
-                  console.log(`🎨 [AI Auto-Fill] Image ${imageIndex}: ${analysis.type} (${analysis.confidence})`);
-                  await ProductImageService.update(image.id, {
-                    image_type: analysis.type,
-                    ai_confidence: analysis.confidence,
-                    ai_analysis: analysis.reason
-                  });
-                }
-              } catch (error) {
-                console.warn('⚠️ Erreur update image:', error);
-              }
-            }
-          }
-          
-          // Supprimer les "unwanted"
-          const unwantedAnalyses = classifyData.analyses?.filter((a: any) => a.type === 'unwanted') || [];
-          console.log(`🗑️ [AI Auto-Fill] Suppression de ${unwantedAnalyses.length} images unwanted`);
-          
-          for (const analysis of unwantedAnalyses) {
-            try {
-              const imageIndex = analysis.index;
-              const image = allImages[imageIndex];
-              
-              if (image) {
-                await ProductImageService.delete(image.id);
-                console.log(`🗑️ [AI Auto-Fill] Image unwanted supprimée: ${imageIndex}`);
-              }
-            } catch (error) {
-              console.warn('⚠️ Erreur suppression image:', error);
-            }
-          }
-        } else {
-          console.error('❌ [AI Auto-Fill] Erreur classification:', await classifyResponse.text());
-        }
-      }
-
-      // Recompter
-      allImages = await ProductImageService.getByProductId(productId);
-      const totalImagesCount = allImages.length;
-
-      // Featured automatique
-      const hasFeatured = allImages.some(img => img.is_featured);
-      if (!hasFeatured && allImages.length > 0) {
-        const firstProductImage = allImages.find(img => img.image_type === 'product');
-        const imageToFeature = firstProductImage || allImages[0];
-        await ProductImageService.update(imageToFeature.id, { is_featured: true });
-        notifyThumbnailChange();
-      }
-
-      // Recharger les images dans l'UI
-      const sortedImages = allImages.sort((a, b) => {
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      });
-      setImages(sortedImages);
-
-      // Mettre à jour les métadonnées dans formData
-      if (metaData.success && metaData.data) {
-        const cleanedData = { ...metaData.data };
-        delete cleanedData.category;
-        
-        const metasCount = Object.keys(cleanedData).filter(key => {
-          const value = cleanedData[key as keyof typeof cleanedData];
-          return value !== null && value !== '' && value !== undefined;
-        }).length;
-
-        // Mettre à jour le formData directement
-        setFormData(prev => ({
-          ...prev,
-          ...cleanedData
-        }));
-
-        // Marquer les champs comme remplis par l'IA
-        setAiFilledFields(new Set(Object.keys(cleanedData)));
-
-        console.log(`📈 [AI Auto-Fill] Résumé: ${totalImagesCount} images, ${metasCount} metas`);
-        setCompleteSummary({ images: totalImagesCount, metas: metasCount });
-        setAiStep('complete');
-      }
-    } catch (error) {
-      console.error('❌ [AI Auto-Fill] Erreur:', error);
-      setAiStep('error');
-      setTimeout(() => setAiStep('idle'), 3000);
-    }
-  };
-
-  /**
-   * 🤖 FONCTION 2 : Remplissage IA Avancé (ANCIEN - Métadonnées uniquement)
+   * 🤖 FONCTION 2 : Remplissage IA Avancé
    * Appelé manuellement via le bouton IA
    * Utilise Claude pour rechercher et remplir les informations complètes
    */
@@ -812,10 +478,7 @@ export default function ProductInspector({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          productData: {
-            ...formData,
-            brand_id: formData.brand_id // 🆕 ID de la marque pour prompt personnalisé
-          },
+          productData: formData,
           apiKey: apiKey,
           model: model
         })
@@ -923,9 +586,8 @@ export default function ProductInspector({
       console.log('🖼️ [IA Images] Début récupération images, filtre:', filterType);
       setIsAILoadingImages(true);
       
-      // 🆕 Vérifier qu'il y a au moins un nom
-      if (!formData.name || formData.name.trim() === '') {
-        alert('⚠️ Veuillez saisir au moins un nom de produit');
+      if (!product?.id) {
+        alert('⚠️ Veuillez d\'abord sauvegarder le produit');
         return;
       }
       
@@ -956,10 +618,9 @@ export default function ProductInspector({
         },
         body: JSON.stringify({
           productData: {
-            id: productId,
+            id: product.id,
             name: formData.name,
             brand: formData.brand,
-            brand_id: formData.brand_id, // 🆕 ID de la marque pour prompt personnalisé
             manufacturer: formData.manufacturer,
             barcode: formData.barcode
           },
@@ -981,18 +642,47 @@ export default function ProductInspector({
       if (result.supabaseImages && result.supabaseImages.length > 0) {
         console.log('🖼️ [IA Images] Images uploadées:', result.supabaseImages.length);
         
-        // ✅ Les images sont DÉJÀ sauvegardées en BDD par /api/download-images
-        // Pas besoin de les sauvegarder à nouveau ici (évite les doublons)
+        // Sauvegarder chaque image dans la base de données
+        const savedImages: ProductImage[] = [];
+        let firstImageId: string | null = null;
+        let totalSize = 0;
+        
+        for (let i = 0; i < result.supabaseImages.length; i++) {
+          const url = result.supabaseImages[i];
+          
+          try {
+            // Extraire le nom du fichier depuis l'URL
+            const fileName = url.split('/').pop() || `image_${i}`;
+            const storagePath = url.replace('https://nuonbtjrtacfjifnrziv.supabase.co/storage/v1/object/public/product-images/', '');
+            
+            // Estimer la taille (environ 200KB par image JPEG compressée)
+            totalSize += 200 * 1024;
+            
+            // Créer l'image dans la BDD
+            const savedImage = await ProductImageService.create({
+              product_id: product.id!,
+              storage_path: storagePath,
+              url: url,
+              is_featured: false, // On définira manuellement après
+              file_name: fileName,
+              mime_type: 'image/jpeg' // Les images sont forcées en JPEG
+            });
+            
+            console.log(`✅ [IA Images] Image ${i+1} sauvegardée en BDD:`, savedImage.id);
+            savedImages.push(savedImage);
+            
+            if (i === 0) {
+              firstImageId = savedImage.id;
+            }
+            
+          } catch (error: any) {
+            console.error(`❌ [IA Images] Erreur sauvegarde image ${i+1}:`, error);
+          }
+        }
         
         // Recharger toutes les images depuis la BDD
         console.log('🔄 [IA Images] Rechargement des images depuis la BDD...');
-        let allImages = await ProductImageService.getByProductId(productId);
-        
-        // Trier les images par date de création (plus récentes en premier)
-        allImages.sort((a, b) => {
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        });
-        
+        let allImages = await ProductImageService.getByProductId(product.id!);
         setImages(allImages);
         
         // Classifier les images avec l'IA
@@ -1027,10 +717,10 @@ export default function ProductInspector({
               console.log('✅ [IA Images] Classification terminée');
               
               // Mettre à jour chaque image avec sa classification
-              for (let i = 0; i < allImages.length; i++) {
+              for (let i = 0; i < savedImages.length; i++) {
                 const analysis = classifyData.analyses?.find((a: any) => a.index === i);
-                if (analysis && allImages[i]) {
-                  await ProductImageService.update(allImages[i].id, {
+                if (analysis && savedImages[i]) {
+                  await ProductImageService.update(savedImages[i].id, {
                     image_type: analysis.type,
                     ai_confidence: analysis.confidence,
                     ai_analysis: {
@@ -1042,7 +732,7 @@ export default function ProductInspector({
               }
               
               // Supprimer automatiquement les images "unwanted"
-              const unwantedImages = allImages.filter((img: ProductImage, i: number) => {
+              const unwantedImages = savedImages.filter((img, i) => {
                 const analysis = classifyData.analyses?.find((a: any) => a.index === i);
                 return analysis?.type === 'unwanted';
               });
@@ -1061,7 +751,7 @@ export default function ProductInspector({
         }
         
         // Recharger après classification
-        allImages = await ProductImageService.getByProductId(productId);
+        allImages = await ProductImageService.getByProductId(product.id!);
         setImages(allImages);
         
         // Définir la première image "product" comme featured si aucune image featured n'existe
@@ -1075,20 +765,24 @@ export default function ProductInspector({
           await ProductImageService.update(imageToFeature.id, { is_featured: true });
           
           // Recharger pour avoir la featured à jour
-          const updatedImages = await ProductImageService.getByProductId(productId);
+          const updatedImages = await ProductImageService.getByProductId(product.id!);
           setImages(updatedImages);
           
           // Forcer le refresh du thumbnail dans le header
-          notifyThumbnailChange();
+          setThumbnailRefresh(prev => prev + 1);
         }
         
-        // Afficher un feedback visuel
+        // Afficher un feedback visuel au lieu d'un alert
+        const sizeInMB = (totalSize / (1024 * 1024)).toFixed(2);
         const finalCount = allImages.filter(img => img.image_type !== 'unwanted').length;
+        const unwantedCount = savedImages.length - finalCount;
         
         setImagesFeedback({
-          message: `${finalCount} image(s) récupérée(s) et classée(s)`,
+          message: unwantedCount > 0 
+            ? `${finalCount} image(s) récupérée(s), ${unwantedCount} rejetée(s) par IA`
+            : `${finalCount} image(s) récupérée(s) et sauvegardée(s)`,
           count: finalCount,
-          size: 'N/A'
+          size: `${sizeInMB} MB`
         });
         
         // Masquer le feedback après 5 secondes
@@ -1121,11 +815,8 @@ export default function ProductInspector({
     
     console.log('✅ [ProductInspector] Validation OK');
     
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const cleanedData: any = {
+    const cleanedData = {
       ...formData,
-      // 🆕 Inclure l'ID pour les nouveaux produits
-      ...(isNewProduct ? { id: productId } : {}),
       category_id: formData.category_id || null,
       manufacturer: formData.manufacturer || null,
       internal_ref: formData.internal_ref || null,
@@ -1133,7 +824,6 @@ export default function ProductInspector({
       notes: formData.notes || null,
       manufacturer_ref: formData.manufacturer_ref,
       brand: formData.brand,
-      brand_id: formData.brand_id, // 🆕 FK vers brands
       short_description: formData.short_description,
       selling_price_htva: formData.selling_price_htva,
       purchase_price_htva: formData.purchase_price_htva,
@@ -1170,12 +860,6 @@ export default function ProductInspector({
       console.log('📤 [ProductInspector] Envoi des données à onSubmit');
       await onSubmit(cleanedData);
       console.log('✅ [ProductInspector] Produit sauvegardé avec succès');
-      
-      // ✅ Après sauvegarde réussie, mettre à jour initialFormData
-      const updatedInitialData = JSON.parse(JSON.stringify(formData));
-      setInitialFormData(updatedInitialData);
-      setHasChanges(false);
-      console.log('✅ [ProductInspector] initialFormData mis à jour après sauvegarde');
     } catch (error) {
       console.error('❌ [ProductInspector] Erreur lors de la soumission:', error);
     }
@@ -1255,6 +939,28 @@ export default function ProductInspector({
                     <Tag className="h-4 w-4" />
                     Informations de base
                   </h3>
+                  
+                  {/* 🤖 Bouton IA (Fonction 2) */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAIFill}
+                    disabled={isAILoading}
+                    className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 hover:from-purple-600 hover:to-pink-600"
+                  >
+                    {isAILoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Analyse IA...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4" />
+                        <span>Remplir avec IA</span>
+                      </>
+                    )}
+                  </Button>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
@@ -1353,39 +1059,26 @@ export default function ProductInspector({
 
                   {/* Marque */}
                   <div className="space-y-2">
-                    <Label htmlFor="brand_id" className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                      <Building2 className="h-4 w-4" />
-                      Marque
-                      {aiFilledFields.has('brand') && (
-                        <Badge variant="outline" className="ml-auto text-[10px] bg-purple-50 text-purple-600 border-purple-200">
-                          <Sparkles className="h-2.5 w-2.5 mr-0.5" />
-                          IA
-                        </Badge>
-                      )}
-                    </Label>
-                    <Select
-                      value={formData.brand_id || undefined}
-                      onValueChange={(value) => {
-                        setFormData(prev => ({ ...prev, brand_id: value }));
-                      }}
-                      disabled={isLoadingBrands}
+                    <AILabelWithButton
+                      htmlFor="brand"
+                      icon={<Building2 className="h-4 w-4" />}
+                      fieldKey="brand"
+                      fieldLabel="Marque"
+                      productName={formData.name}
+                      productBarcode={formData.barcode || undefined}
+                      isAIGenerated={aiFilledFields.has('brand')}
+                      onFillComplete={(value) => handleInputChange('brand', value)}
                     >
-                      <SelectTrigger className="h-10 w-full">
-                        <SelectValue placeholder={isLoadingBrands ? "Chargement..." : "Sélectionner une marque"} />
-                      </SelectTrigger>
-                      <SelectContent className="w-full">
-                        {brands.map((brand) => (
-                          <SelectItem key={brand.id} value={brand.id}>
-                            <div className="flex items-center gap-2">
-                              {brand.ai_fetch_prompt && (
-                                <Sparkles className="h-3 w-3 text-purple-500 flex-shrink-0" />
-                              )}
-                              <span className="truncate">{brand.name}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      Marque
+                    </AILabelWithButton>
+                    <Input
+                      id="brand"
+                      value={formData.brand || ''}
+                      onChange={(e) => handleInputChange('brand', e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Apple, Samsung, etc."
+                      className="h-10"
+                    />
                   </div>
 
                   {/* Catégorie */}
@@ -1756,13 +1449,13 @@ export default function ProductInspector({
             <div className="flex-1 min-w-0 h-full flex flex-col justify-between">
               {/* Ligne 1: Nom du produit */}
               <h2 className="text-lg font-bold text-gray-900 truncate">
-                {formData.name || (product ? product.name : 'Nouveau produit')}
+                {product ? product.name : 'Nouveau produit'}
               </h2>
               
               {/* Ligne 2: Référence fabricant */}
               <div className="flex items-center gap-1">
                 <span className="text-xs text-gray-400">
-                  {formData.manufacturer_ref || product?.manufacturer_ref || 'Aucune référence'}
+                  {product?.manufacturer_ref || 'Aucune référence'}
                 </span>
               </div>
               
@@ -1821,17 +1514,6 @@ export default function ProductInspector({
             
             {/* Boutons d'action dans le header */}
             <div className="flex items-start gap-2">
-              {/* 🚀 Bouton IA Auto-Fill Complet */}
-              {product && (
-                <AIAutoFillButton
-                  step={aiStep}
-                  onClick={handleAIAutoFill}
-                  completeSummary={completeSummary}
-                  variant="inspector"
-                  className="flex-shrink-0"
-                />
-              )}
-              
               {/* Bouton supprimer */}
               {product && onDelete && (
                 <Button
@@ -1879,13 +1561,13 @@ export default function ProductInspector({
               </Button>
             </div>
             <ImageUploader
-              productId={productId} // 🆕 UUID généré ou existant
+              productId={product?.id}
               images={images}
               onImagesChange={setImages}
               onAIFillImages={handleAIFillImages}
               isAILoadingImages={isAILoadingImages}
               imagesFeedback={imagesFeedback}
-              onFeaturedChange={notifyThumbnailChange}
+              onFeaturedChange={() => setThumbnailRefresh(prev => prev + 1)}
             />
           </div>
         </div>

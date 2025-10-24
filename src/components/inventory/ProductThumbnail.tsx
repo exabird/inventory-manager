@@ -9,29 +9,29 @@ interface ProductThumbnailProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
   fallbackIcon?: boolean;
+  refreshTrigger?: number; // Pour forcer le rechargement
 }
 
 export default function ProductThumbnail({ 
   productId, 
   className = '', 
   size = 'md',
-  fallbackIcon = true 
+  fallbackIcon = true,
+  refreshTrigger = 0
 }: ProductThumbnailProps) {
   const [featuredImage, setFeaturedImage] = useState<ProductImage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadFeaturedImage();
-  }, [productId]);
+  }, [productId, refreshTrigger]);
 
   const loadFeaturedImage = async () => {
     try {
       setIsLoading(true);
-      // Temporairement désactivé pour éviter les erreurs UUID
-      // const images = await ProductImageService.getByProductId(productId);
-      // const featured = images.find(img => img.is_featured) || images[0];
-      // setFeaturedImage(featured || null);
-      setFeaturedImage(null);
+      const images = await ProductImageService.getByProductId(productId);
+      const featured = images.find(img => img.is_featured) || images[0];
+      setFeaturedImage(featured || null);
     } catch (error) {
       // Ne pas logger les erreurs si c'est juste qu'il n'y a pas d'images
       setFeaturedImage(null);

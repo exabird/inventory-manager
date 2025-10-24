@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import CompactProductListItem from '@/components/inventory/CompactProductListItem';
 import FilterModal from '@/components/inventory/FilterModal';
 import { Product } from '@/lib/supabase';
+import { GLASS_STYLES } from '@/lib/glassmorphism';
 
 type SortField = 'name' | 'manufacturer_ref' | 'category' | 'quantity' | 'selling_price_htva' | 'purchase_price_htva';
 type SortDirection = 'asc' | 'desc' | null;
@@ -39,6 +40,7 @@ interface CompactProductListProps {
   products: (Product & { categories?: { name: string } })[];
   onProductSelect: (product: Product) => void;
   onStockEdit: (product: Product) => void;
+  onAIFill: (product: Product, onProgress?: (step: 'idle' | 'starting' | 'fetching_metadata' | 'scraping_images' | 'classifying_images' | 'complete' | 'error') => void) => Promise<{ images: number; metas: number }>;
   searchQuery: string;
   onSearchChange: (query: string) => void;
 }
@@ -47,6 +49,7 @@ export default function CompactProductList({
   products,
   onProductSelect,
   onStockEdit,
+  onAIFill,
   searchQuery,
   onSearchChange
 }: CompactProductListProps) {
@@ -213,43 +216,45 @@ export default function CompactProductList({
 
   return (
     <>
-      {/* Header avec recherche et filtres - Design Shadcn */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="p-4">
+      {/* Header avec recherche et filtres - Design Moderne */}
+      <div className={GLASS_STYLES.stickyTop}>
+        <div className="px-4 py-3">
           <div className="flex items-center gap-3">
-            {/* Barre de recherche Shadcn */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            {/* Barre de recherche moderne */}
+            <div className="relative flex-1 group">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"></div>
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors duration-200" />
               <Input
                 type="text"
                 placeholder="Rechercher par nom, référence, marque..."
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-10"
+                className="pl-11 pr-10 h-11 bg-background/50 border-border/60 hover:border-primary/30 focus:border-primary/50 transition-all duration-200 shadow-sm hover:shadow-md focus:shadow-lg"
               />
               {searchQuery && (
                 <button
                   onClick={() => onSearchChange('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  title="Effacer la recherche"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-muted/50 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-all duration-200"
+                  title="Effacer"
                 >
                   <span className="text-xs">✕</span>
                 </button>
               )}
             </div>
             
-            {/* Bouton filtres Shadcn */}
+            {/* Bouton filtres moderne */}
             <Button
               variant="outline"
               size="default"
-              className="gap-2"
+              className="gap-2 h-11 px-5 border-border/60 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200 shadow-sm hover:shadow-md relative overflow-hidden group"
               onClick={() => setShowFilterModal(true)}
               title="Filtres & Colonnes"
             >
-              <Filter className="h-4 w-4" />
-              <span className="hidden sm:inline">Filtres</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <Filter className="h-4 w-4 relative z-10" />
+              <span className="hidden sm:inline relative z-10 font-medium">Filtres</span>
               {(filterConfig.categories.length > 0 || filterConfig.stockStatus.length > 0) && (
-                <Badge variant="default" className="ml-1">
+                <Badge variant="default" className="ml-1 relative z-10 bg-primary/90 hover:bg-primary transition-colors">
                   {filterConfig.categories.length + filterConfig.stockStatus.length}
                 </Badge>
               )}
@@ -258,86 +263,101 @@ export default function CompactProductList({
         </div>
       </div>
 
-      {/* Header de colonnes - Desktop uniquement - Design Shadcn */}
-      <div className="hidden md:block bg-muted/40 border-b sticky top-[76px] z-[9]">
-        <div className="flex items-center gap-3 py-2.5 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          <div className="w-4"></div>
-          <div className="w-12"></div>
-          <button 
-            className="flex-1 flex items-center gap-1 hover:text-foreground transition-colors"
-            onClick={() => handleSort('name')}
-          >
-            <span>Produit</span>
-            {getSortIcon('name')}
-          </button>
+      {/* Header de colonnes - Desktop uniquement - Design Moderne */}
+      <div className={`hidden md:block ${GLASS_STYLES.columnHeader}`}>
+        <div className="flex items-center gap-3 py-2.5 px-4">
+          {/* Checkbox - w-4 exact */}
+          <div className="flex-shrink-0 w-4"></div>
+          
+          {/* Image - w-12 exact */}
+          <div className="flex-shrink-0 w-12"></div>
+          
+          {/* Produit - flex-1 exact */}
+          <div className="flex-1 min-w-0 flex items-center">
+            <button 
+              className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all duration-200 uppercase tracking-wider group"
+              onClick={() => handleSort('name')}
+            >
+              <span className="group-hover:translate-x-0.5 transition-transform">Produit</span>
+              <span className="opacity-60 group-hover:opacity-100 transition-opacity">{getSortIcon('name')}</span>
+            </button>
+          </div>
+          
+          {/* Réf. - w-24 exact */}
           {columnVisibility.manufacturer_ref && (
-            <button 
-              className="w-24 flex items-center gap-1 hover:text-foreground transition-colors"
-              onClick={() => handleSort('manufacturer_ref')}
-            >
-              <Hash className="h-3 w-3" />
-              <span>Réf.</span>
-              {getSortIcon('manufacturer_ref')}
-            </button>
+            <div className="flex-shrink-0 w-24">
+              <button 
+                className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all duration-200 uppercase tracking-wider group"
+                onClick={() => handleSort('manufacturer_ref')}
+              >
+                <Hash className="h-3 w-3 opacity-60 group-hover:opacity-100 transition-opacity" />
+                <span className="group-hover:translate-x-0.5 transition-transform">Réf.</span>
+                <span className="opacity-60 group-hover:opacity-100 transition-opacity">{getSortIcon('manufacturer_ref')}</span>
+              </button>
+            </div>
           )}
+          
+          {/* Catégorie - w-32 exact */}
           {columnVisibility.category && (
-            <button 
-              className="w-32 flex items-center gap-1 hover:text-foreground transition-colors"
-              onClick={() => handleSort('category')}
-            >
-              <Tag className="h-3 w-3" />
-              <span>Catégorie</span>
-              {getSortIcon('category')}
-            </button>
+            <div className="flex-shrink-0 w-32">
+              <button 
+                className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all duration-200 uppercase tracking-wider group"
+                onClick={() => handleSort('category')}
+              >
+                <Tag className="h-3 w-3 opacity-60 group-hover:opacity-100 transition-opacity" />
+                <span className="group-hover:translate-x-0.5 transition-transform">Catégorie</span>
+                <span className="opacity-60 group-hover:opacity-100 transition-opacity">{getSortIcon('category')}</span>
+              </button>
+            </div>
           )}
+          
+          {/* Marque - w-24 exact + justify-center */}
           {columnVisibility.brand && (
-            <div className="w-24 text-center">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            <div className="flex-shrink-0 w-24 flex items-center justify-center">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Marque
               </span>
             </div>
           )}
+          
+          {/* Stock - w-20 exact + text-center */}
           {columnVisibility.quantity && (
-            <button 
-              className="w-20 flex items-center justify-end gap-1 hover:text-foreground transition-colors"
-              onClick={() => handleSort('quantity')}
-            >
-              <span>Stock</span>
-              {getSortIcon('quantity')}
-            </button>
+            <div className="flex-shrink-0 w-20 flex items-center justify-center">
+              <button 
+                className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all duration-200 uppercase tracking-wider group"
+                onClick={() => handleSort('quantity')}
+              >
+                <span className="group-hover:translate-x-0.5 transition-transform">Stock</span>
+                <span className="opacity-60 group-hover:opacity-100 transition-opacity">{getSortIcon('quantity')}</span>
+              </button>
+            </div>
           )}
+          
+          {/* Prix Vente - w-20 exact + text-right */}
           {columnVisibility.selling_price_htva && (
-            <button 
-              className="w-20 flex items-center justify-end gap-1 hover:text-foreground transition-colors"
-              onClick={() => handleSort('selling_price_htva')}
-            >
-              <span>Prix Vente</span>
-              {getSortIcon('selling_price_htva')}
-            </button>
+            <div className="flex-shrink-0 w-20 flex items-center justify-end">
+              <button 
+                className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all duration-200 uppercase tracking-wider group"
+                onClick={() => handleSort('selling_price_htva')}
+              >
+                <span className="group-hover:translate-x-0.5 transition-transform">Vente</span>
+                <span className="opacity-60 group-hover:opacity-100 transition-opacity">{getSortIcon('selling_price_htva')}</span>
+              </button>
+            </div>
           )}
+          
+          {/* Prix Achat - w-20 exact + text-right */}
           {columnVisibility.purchase_price_htva && (
-            <button 
-              className="w-20 flex items-center justify-end gap-1 hover:text-foreground transition-colors"
-              onClick={() => handleSort('purchase_price_htva')}
-            >
-              <span>Prix Achat</span>
-              {getSortIcon('purchase_price_htva')}
-            </button>
+            <div className="flex-shrink-0 w-20 flex items-center justify-end">
+              <button 
+                className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all duration-200 uppercase tracking-wider group"
+                onClick={() => handleSort('purchase_price_htva')}
+              >
+                <span className="group-hover:translate-x-0.5 transition-transform">Achat</span>
+                <span className="opacity-60 group-hover:opacity-100 transition-opacity">{getSortIcon('purchase_price_htva')}</span>
+              </button>
+            </div>
           )}
-          
-          {/* Colonnes dynamiques */}
-          {Object.keys(columnVisibility)
-            .filter(key => !['manufacturer_ref', 'category', 'quantity', 'selling_price_htva', 'purchase_price_htva', 'brand'].includes(key))
-            .filter(key => columnVisibility[key])
-            .map(fieldKey => (
-              <div key={fieldKey} className="w-20 text-center">
-                <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                  {fieldKey.replace('metadata.', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                </span>
-              </div>
-            ))}
-          
-          <div className="w-8"></div>
         </div>
       </div>
 
@@ -356,12 +376,13 @@ export default function CompactProductList({
                 product={product}
                 onSelect={onProductSelect}
                 onStockEdit={onStockEdit}
+                onAIFill={onAIFill}
                 columnVisibility={columnVisibility}
               />
             ))}
             
             {/* Ligne de total - Design Shadcn sobre */}
-            <div className="hidden md:flex items-center gap-3 py-3 px-4 border-t-2 bg-muted/30 font-semibold sticky bottom-0">
+            <div className={`hidden md:flex items-center gap-3 py-3 px-4 font-semibold ${GLASS_STYLES.stickyBottom}`}>
               <div className="w-4"></div>
               <div className="w-12"></div>
               <div className="flex-1">

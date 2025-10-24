@@ -57,4 +57,44 @@ export function AIInputWrapper({ children, isAIGenerated, confidence, className 
   );
 }
 
+// Indicateur IA inline pour les labels
+interface AILabelIndicatorProps {
+  isAIGenerated?: boolean;
+  className?: string;
+}
+
+export function AILabelIndicator({ isAIGenerated, className }: AILabelIndicatorProps) {
+  if (!isAIGenerated) return null;
+
+  return (
+    <span title="Rempli par IA">
+      <Sparkles 
+        className={cn('h-3.5 w-3.5 text-purple-500 ml-1.5 inline-block', className)} 
+      />
+    </span>
+  );
+}
+
+// Wrapper pour Label avec indicateur IA
+interface AILabelProps {
+  htmlFor?: string;
+  children: React.ReactNode;
+  isAIGenerated?: boolean;
+  icon?: React.ReactNode;
+  className?: string;
+}
+
+export function AILabel({ htmlFor, children, isAIGenerated, icon, className }: AILabelProps) {
+  return (
+    <label
+      htmlFor={htmlFor}
+      className={cn('flex items-center gap-2 text-sm font-medium text-gray-700', className)}
+    >
+      {icon}
+      {children}
+      <AILabelIndicator isAIGenerated={isAIGenerated} />
+    </label>
+  );
+}
+
 

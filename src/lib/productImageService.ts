@@ -9,6 +9,13 @@ export interface ProductImage {
   file_name: string;
   file_size?: number;
   mime_type?: string;
+  image_type?: 'product' | 'lifestyle' | 'other' | 'unwanted';
+  ai_confidence?: number;
+  ai_analysis?: {
+    reason?: string;
+    description?: string;
+    matches_product?: boolean;
+  };
   created_at: string;
   updated_at: string;
 }

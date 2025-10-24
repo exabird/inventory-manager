@@ -1,28 +1,53 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Upload, X, Star, StarOff, Image as ImageIcon, Trash2, GripVertical } from 'lucide-react';
+import { Upload, X, Star, StarOff, Image as ImageIcon, Trash2, GripVertical, Sparkles, Loader2, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase, STORAGE_BUCKETS, getImageUrl } from '@/lib/supabase';
 import { ProductImageService, ProductImage } from '@/lib/productImageService';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 interface ImageUploaderProps {
   productId?: string;
   images: ProductImage[];
   onImagesChange: (images: ProductImage[]) => void;
   maxImages?: number;
+  onAIFillImages?: (filterType?: 'all' | 'product' | 'lifestyle') => void;
+  isAILoadingImages?: boolean;
+  imagesFeedback?: { message: string; count: number; size: string } | null;
+  onFeaturedChange?: () => void;
 }
 
 export default function ImageUploader({ 
   productId, 
   images, 
   onImagesChange, 
-  maxImages = 10
+  maxImages = 10,
+  onAIFillImages,
+  isAILoadingImages = false,
+  imagesFeedback,
+  onFeaturedChange
 }: ImageUploaderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [imageTypeFilter, setImageTypeFilter] = useState<'all' | 'product' | 'lifestyle' | 'other'>('all');
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -32,6 +57,24 @@ export default function ImageUploader({
       loadExistingImages();
     }
   }, [productId]);
+  
+  // Debug compteurs et filtrage
+  useEffect(() => {
+    console.log('📊 [ImageUploader] État complet:', {
+      imagesLength: images.length,
+      imageTypes: images.map(img => ({
+        id: img.id.substring(0, 8),
+        type: img.image_type,
+        url: img.url.substring(0, 50)
+      })),
+      filterActive: imageTypeFilter,
+      productCount: images.filter(img => img.image_type === 'product').length,
+      lifestyleCount: images.filter(img => img.image_type === 'lifestyle').length,
+      otherCount: images.filter(img => img.image_type === 'other').length,
+      nullCount: images.filter(img => !img.image_type || img.image_type === null).length,
+      unwantedCount: images.filter(img => img.image_type === 'unwanted').length
+    });
+  }, [images, imageTypeFilter]);
 
   const loadExistingImages = async () => {
     if (!productId) return;
@@ -132,8 +175,14 @@ export default function ImageUploader({
       }
 
       if (newImages.length > 0) {
-        onImagesChange([...images, ...newImages]);
+        const updatedImages = [...images, ...newImages];
+        onImagesChange(updatedImages);
         console.log(`✅ ${newImages.length} image(s) uploadée(s) avec succès`);
+        
+        // Si c'est la première image, notifier le parent pour rafraîchir le thumbnail
+        if (images.length === 0 && onFeaturedChange) {
+          onFeaturedChange();
+        }
         
         // Scroll vers la fin pour voir les nouvelles images
         setTimeout(() => {
@@ -169,31 +218,47 @@ export default function ImageUploader({
 
   const deleteImage = async (imageToDelete: ProductImage) => {
     try {
-      console.log('🗑️ Suppression image:', imageToDelete.id);
+      console.log('🗑️ [Delete] Avant suppression:', images.length, 'images');
       
-      // Supprimer de Supabase Storage
-      const { error: storageError } = await supabase.storage
-        .from(STORAGE_BUCKETS.PRODUCT_IMAGES)
-        .remove([imageToDelete.storage_path]);
-
-      if (storageError) {
-        console.warn('⚠️ Erreur suppression storage:', storageError);
-      }
-
-      // Supprimer de la base de données
-      await ProductImageService.delete(imageToDelete.id);
-      console.log('✅ Image supprimée de la base de données');
-
-      // Mettre à jour la liste locale
+      // Suppression optimiste : retirer immédiatement de l'UI
       const updatedImages = images.filter(img => img.id !== imageToDelete.id);
       
+      console.log('🗑️ [Delete] Après filtrage:', updatedImages.length, 'images');
+      console.log('🗑️ [Delete] Appel onImagesChange avec:', updatedImages.length, 'images');
+      
+      onImagesChange(updatedImages);
+      
+      console.log('🗑️ Suppression image:', imageToDelete.id);
+      
+      // ⚠️ IMPORTANT : Attendre la suppression BDD avant de continuer
+      // Cela évite les bugs de synchronisation avec le polling
+      try {
+        await ProductImageService.delete(imageToDelete.id);
+        console.log('✅ Image supprimée de la base de données');
+      } catch (err) {
+        console.error('❌ Erreur suppression BDD:', err);
+      }
+      
+      // Supprimer de Supabase Storage en arrière-plan (moins critique)
+      supabase.storage
+        .from(STORAGE_BUCKETS.PRODUCT_IMAGES)
+        .remove([imageToDelete.storage_path])
+        .then(() => console.log('✅ Image supprimée du storage'))
+        .catch(err => console.warn('⚠️ Erreur suppression storage:', err));
+
       // Si on supprime l'image featured, faire de la première image la nouvelle featured
       if (imageToDelete.is_featured && updatedImages.length > 0) {
-        await ProductImageService.setFeatured(imageToDelete.product_id, updatedImages[0].id);
         updatedImages[0].is_featured = true;
+        
+        ProductImageService.setFeatured(imageToDelete.product_id, updatedImages[0].id)
+          .then(() => {
+            console.log('✅ Nouvelle featured définie');
+            if (onFeaturedChange) {
+              onFeaturedChange();
+            }
+          })
+          .catch(err => console.warn('⚠️ Erreur définition featured:', err));
       }
-
-      onImagesChange(updatedImages);
     } catch (error) {
       console.warn('⚠️ Erreur lors de la suppression:', error);
     }
@@ -212,6 +277,12 @@ export default function ImageUploader({
       }));
       
       onImagesChange(updatedImages);
+      
+      // Notifier le parent pour rafraîchir le thumbnail
+      if (onFeaturedChange) {
+        onFeaturedChange();
+      }
+      
       console.log('✅ Image featured mise à jour');
     } catch (error) {
       console.warn('⚠️ Erreur lors de la définition featured:', error);
@@ -255,23 +326,84 @@ export default function ImageUploader({
     );
   }
 
+  // Filtrer les images selon le type sélectionné
+  const filteredImages = images.filter(img => {
+    // Exclure les unwanted
+    if (img.image_type === 'unwanted') return false;
+    
+    // Si "all", afficher toutes sauf unwanted (y compris NULL)
+    if (imageTypeFilter === 'all') return true;
+    
+    // Sinon, filtrer par type exact
+    return img.image_type === imageTypeFilter;
+  });
+
+  // Compter les images par type
+  const productCount = images.filter(img => img.image_type === 'product').length;
+  const lifestyleCount = images.filter(img => img.image_type === 'lifestyle').length;
+  const otherCount = images.filter(img => img.image_type === 'other').length;
+  const nullCount = images.filter(img => !img.image_type || img.image_type === null).length;
+  const totalCount = images.filter(img => img.image_type !== 'unwanted').length;
+  
+  console.log('🔍 [ImageUploader] Filtrage:', {
+    filterActive: imageTypeFilter,
+    totalImages: images.length,
+    filtered: filteredImages.length,
+    productCount,
+    lifestyleCount,
+    otherCount,
+    nullCount,
+    totalCount
+  });
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-0.5">
+      {/* Toggle de filtrage par type */}
+      {images.length > 0 && (
+        <ToggleGroup 
+          type="single" 
+          value={imageTypeFilter} 
+          onValueChange={(value) => value && setImageTypeFilter(value as 'all' | 'product' | 'lifestyle' | 'other')}
+        >
+          <ToggleGroupItem value="all">
+            Toutes ({totalCount}{nullCount > 0 ? ` dont ${nullCount} non classifiées` : ''})
+          </ToggleGroupItem>
+          <ToggleGroupItem value="product">
+            Produit ({productCount})
+          </ToggleGroupItem>
+          <ToggleGroupItem value="lifestyle">
+            Situation ({lifestyleCount})
+          </ToggleGroupItem>
+          <ToggleGroupItem value="other">
+            Autres ({otherCount})
+          </ToggleGroupItem>
+        </ToggleGroup>
+      )}
+      
       {/* Container avec scroll horizontal */}
       <div 
         ref={scrollContainerRef}
-        className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+        className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
         style={{ scrollbarWidth: 'thin' }}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
       >
+        {/* Message si aucune image après filtrage */}
+        {images.length > 0 && filteredImages.length === 0 && (
+          <div className="flex items-center justify-center w-full h-[100px] text-gray-400 text-sm">
+            Aucune image de ce type
+          </div>
+        )}
+        
         {/* Images existantes */}
-        {images.map((image, index) => (
+        {filteredImages.map((image, index) => (
           <div
             key={image.id}
-            className={`relative group flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden border-2 transition-all ${
-              image.is_featured ? 'border-yellow-400 shadow-md' : 'border-gray-200'
+            className={`relative group flex-shrink-0 w-[100px] h-[100px] rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+              image.is_featured 
+                ? 'border-blue-400 shadow-md ring-1 ring-blue-200' 
+                : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
             } ${draggedIndex === index ? 'opacity-50 scale-95' : ''}`}
             draggable
             onDragStart={(e) => handleDragStart(e, index)}
@@ -281,7 +413,18 @@ export default function ImageUploader({
             <img
               src={image.url}
               alt={image.file_name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover bg-white cursor-pointer select-none"
+              onClick={() => {
+                setLightboxIndex(index);
+                setLightboxOpen(true);
+              }}
+              onError={(e) => {
+                console.warn('⚠️ Erreur chargement image:', image.url);
+                // Afficher un placeholder au lieu de masquer
+                const target = e.currentTarget as HTMLImageElement;
+                target.style.opacity = '0.3';
+                target.style.filter = 'grayscale(100%)';
+              }}
             />
             
             {/* Overlay avec actions - seulement au hover */}
@@ -330,30 +473,87 @@ export default function ImageUploader({
           </div>
         ))}
 
+        {/* Bouton IA avec dropdown - même format carré */}
+        {onAIFillImages && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild disabled={isAILoadingImages}>
+              <div
+                className={`flex-shrink-0 w-[100px] h-[100px] rounded-lg border-2 transition-all duration-200 cursor-pointer flex items-center justify-center ${
+                  isAILoadingImages
+                    ? 'border-purple-300 bg-purple-50 opacity-50 pointer-events-none' 
+                    : 'border-purple-300 hover:border-purple-400 hover:bg-purple-50 hover:shadow-sm'
+                }`}
+              >
+                {isAILoadingImages ? (
+                  <Loader2 className="h-8 w-8 text-purple-600 animate-spin" />
+                ) : (
+                  <div className="flex flex-col items-center gap-1">
+                    <Sparkles className="h-8 w-8 text-purple-600" />
+                    <ChevronDown className="h-3 w-3 text-purple-600" />
+                  </div>
+                )}
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuLabel>Type d'images à récupérer</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onAIFillImages && onAIFillImages('all')}>
+                <div className="flex flex-col">
+                  <span className="font-medium">Toutes les images</span>
+                  <span className="text-xs text-gray-500">Produit, situation et détails</span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onAIFillImages && onAIFillImages('product')}>
+                <div className="flex flex-col">
+                  <span className="font-medium">Photos produit uniquement</span>
+                  <span className="text-xs text-gray-500">Pack shots sur fond blanc</span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onAIFillImages && onAIFillImages('lifestyle')}>
+                <div className="flex flex-col">
+                  <span className="font-medium">Mises en situation</span>
+                  <span className="text-xs text-gray-500">Photos lifestyle et décor</span>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
         {/* Zone d'upload - même format carré */}
         {images.length < maxImages && (
           <div
-            className={`flex-shrink-0 w-24 h-24 rounded-lg border-2 border-dashed transition-all cursor-pointer flex items-center justify-center ${
+            className={`flex-shrink-0 w-[100px] h-[100px] rounded-lg border-2 border-dashed transition-all duration-200 cursor-pointer flex items-center justify-center ${
               dragOver 
-                ? 'border-blue-500 bg-blue-50' 
-                : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                ? 'border-blue-500 bg-blue-50 shadow-sm' 
+                : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50 hover:shadow-sm'
             } ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
             onClick={() => fileInputRef.current?.click()}
           >
             {isUploading ? (
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent mx-auto mb-1"></div>
-                <span className="text-xs text-gray-600">Upload...</span>
-              </div>
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
             ) : (
-              <div className="text-center">
-                <Upload className="h-6 w-6 text-gray-400 mx-auto mb-1" />
-                <span className="text-xs text-gray-500">Ajouter</span>
-              </div>
+              <Upload className="h-8 w-8 text-gray-400" />
             )}
           </div>
         )}
       </div>
+
+      {/* Feedback visuel après récupération IA */}
+      {imagesFeedback && (
+        <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3 animate-fade-in">
+          <div className="flex-shrink-0 mt-0.5">
+            <Sparkles className="h-4 w-4 text-green-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-green-900">
+              {imagesFeedback.message}
+            </p>
+            <p className="text-xs text-green-700 mt-1">
+              {imagesFeedback.count} image(s) • {imagesFeedback.size}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Input file caché */}
       <input
@@ -364,6 +564,51 @@ export default function ImageUploader({
         onChange={(e) => handleFileSelect(e.target.files)}
         className="hidden"
       />
+
+      {/* Lightbox Dialog */}
+      <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
+        <DialogContent className="max-w-4xl p-0 bg-black/95">
+          <div className="relative w-full h-[80vh] flex items-center justify-center">
+            {/* Image principale */}
+            {filteredImages[lightboxIndex] && (
+              <img
+                src={filteredImages[lightboxIndex].url}
+                alt={filteredImages[lightboxIndex].file_name}
+                className="max-w-full max-h-full object-contain"
+              />
+            )}
+            
+            {/* Bouton précédent */}
+            {lightboxIndex > 0 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute left-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-white/20 hover:bg-white/30 text-white"
+                onClick={() => setLightboxIndex(prev => Math.max(0, prev - 1))}
+              >
+                <ChevronLeft className="h-8 w-8" />
+              </Button>
+            )}
+            
+            {/* Bouton suivant */}
+            {lightboxIndex < filteredImages.length - 1 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-white/20 hover:bg-white/30 text-white"
+                onClick={() => setLightboxIndex(prev => Math.min(filteredImages.length - 1, prev + 1))}
+              >
+                <ChevronRight className="h-8 w-8" />
+              </Button>
+            )}
+            
+            {/* Compteur */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-black/50 text-white text-sm">
+              {lightboxIndex + 1} / {filteredImages.length}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

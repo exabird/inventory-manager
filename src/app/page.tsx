@@ -73,29 +73,57 @@ export default function Home() {
 
   // Fonction pour sauvegarder les modifications d'un produit
   const handleUpdateProduct = useCallback(async (data: any) => {
-    if (!selectedProduct) return;
-    
     try {
       console.log('💾 [page.tsx] Début handleUpdateProduct');
       
-      // Mettre à jour le produit dans Supabase
-      const updatedProduct = await ProductService.update(selectedProduct.id, data);
-      
-      if (updatedProduct) {
-        console.log('✅ Produit mis à jour avec succès');
+      if (selectedProduct) {
+        // ✅ MISE À JOUR d'un produit existant
+        console.log('✏️ [page.tsx] Mise à jour du produit:', selectedProduct.id);
         
-        // Recharger la liste des produits
-        await loadProducts();
+        const updatedProduct = await ProductService.update(selectedProduct.id, data);
         
-        // Fermer l'inspecteur
-        handleCloseInspector();
+        if (updatedProduct) {
+          console.log('✅ Produit mis à jour avec succès');
+          
+          // ✅ Mise à jour locale du produit dans la liste (pas de refresh complet)
+          setProducts(prevProducts => 
+            prevProducts.map(p => 
+              p.id === selectedProduct.id ? updatedProduct : p
+            )
+          );
+          
+          // Mettre à jour le produit sélectionné dans l'inspecteur
+          setSelectedProduct(updatedProduct);
+          
+          console.log('✅ Liste mise à jour localement (pas de glitch)');
+        } else {
+          console.error('❌ Erreur lors de la mise à jour du produit');
+        }
       } else {
-        console.error('❌ Erreur lors de la mise à jour du produit');
+        // ✅ CRÉATION d'un nouveau produit
+        console.log('➕ [page.tsx] Création d\'un nouveau produit');
+        
+        const newProduct = await ProductService.create(data);
+        
+        if (newProduct) {
+          console.log('✅ Nouveau produit créé avec succès:', newProduct.id);
+          
+          // ✅ Ajouter le nouveau produit à la liste
+          setProducts(prevProducts => [newProduct, ...prevProducts]);
+          
+          // Fermer l'inspecteur après création
+          setShowInspector(false);
+          setSelectedProduct(null);
+          
+          console.log('✅ Produit ajouté à la liste');
+        } else {
+          console.error('❌ Erreur lors de la création du produit');
+        }
       }
     } catch (error) {
       console.error('❌ [page.tsx] Erreur lors de la sauvegarde:', error);
     }
-  }, [selectedProduct, loadProducts, handleCloseInspector]);
+  }, [selectedProduct]);
 
   // Fonction pour supprimer un produit
   const handleDeleteProduct = useCallback(async (id: string) => {
@@ -117,6 +145,209 @@ export default function Home() {
       }
     } catch (error) {
       console.error('❌ Erreur lors de la suppression:', error);
+    }
+  }, []);
+
+  // Fonction de remplissage IA - IDENTIQUE à l'inspecteur
+  const handleAIFill = useCallback(async (product: Product, onProgress?: (step: 'idle' | 'starting' | 'fetching_metadata' | 'scraping_images' | 'classifying_images' | 'complete' | 'error') => void): Promise<{ images: number; metas: number }> => {
+    console.log('🎨 [AI Auto-Fill] Début remplissage automatique:', product.name);
+    
+    try {
+      // Récupérer les paramètres AI depuis localStorage
+      const savedSettings = localStorage.getItem('ai_settings');
+      let apiKey = null;
+      let model = 'claude-sonnet-4-20250514';
+      
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        apiKey = settings.claudeApiKey;
+        model = settings.model || model;
+      }
+
+      if (!apiKey) {
+        alert('⚠️ Clé API Anthropic non configurée. Allez dans Paramètres.');
+        throw new Error('API key not configured');
+      }
+
+      // ============================================
+      // 1. REMPLISSAGE MÉTADONNÉES (comme inspecteur)
+      // ============================================
+      if (onProgress) onProgress('fetching_metadata');
+      console.log('📝 [AI Auto-Fill] Étape 1/2 : Remplissage métadonnées...');
+      
+      const metaResponse = await fetch('/api/ai-fill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productData: {
+            id: product.id,
+            name: product.name,
+            brand: product.brand,
+            brand_id: product.brand_id, // 🆕 ID de la marque pour prompt personnalisé
+            manufacturer: product.manufacturer,
+            barcode: product.barcode,
+            manufacturer_ref: product.manufacturer_ref
+          },
+          apiKey,
+          model
+        })
+      });
+
+      if (!metaResponse.ok) {
+        throw new Error('Erreur lors du remplissage des métadonnées');
+      }
+
+      const metaData = await metaResponse.json();
+      console.log('✅ [AI Auto-Fill] Métadonnées récupérées');
+
+      // ============================================
+      // 2. RÉCUPÉRATION IMAGES (comme inspecteur)
+      // ============================================
+      if (onProgress) onProgress('scraping_images');
+      console.log('📸 [AI Auto-Fill] Étape 2/2 : Récupération images...');
+      
+      const imagesResponse = await fetch('/api/ai-fill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productData: {
+            id: product.id,
+            name: product.name,
+            brand: product.brand,
+            brand_id: product.brand_id, // 🆕 ID de la marque pour prompt personnalisé
+            manufacturer: product.manufacturer,
+            barcode: product.barcode
+          },
+          apiKey,
+          model,
+          targetField: 'images',
+          mode: 'images_only'
+        })
+      });
+
+      if (!imagesResponse.ok) {
+        throw new Error('Erreur lors de la récupération des images');
+      }
+
+      const imagesData = await imagesResponse.json();
+      console.log('✅ [AI Auto-Fill] Images récupérées');
+
+      // ============================================
+      // 3. CLASSIFICATION DES IMAGES (comme inspecteur)
+      // ============================================
+      if (onProgress) onProgress('classifying_images');
+      console.log('🎨 [AI Auto-Fill] Classification des images...');
+
+      // Recharger les images pour avoir le total
+      const { ProductImageService } = await import('@/lib/productImageService');
+      let allImages = await ProductImageService.getByProductId(product.id);
+
+      // Classifier avec l'IA (toutes les images sans filtre lors du fetch auto)
+      if (allImages.length > 0) {
+        console.log(`🎨 [AI Auto-Fill] Classification de ${allImages.length} images...`);
+        
+        const classifyResponse = await fetch('/api/classify-images', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageUrls: allImages.map(img => img.url), // ✅ Envoyer URLs uniquement
+            productName: product.name,
+            apiKey,
+            model,
+            filterType: 'all' // Pas de filtre lors du fetch auto, on garde toutes les images
+          })
+        });
+
+        if (classifyResponse.ok) {
+          const classifyData = await classifyResponse.json();
+          console.log('✅ [AI Auto-Fill] Classification reçue:', classifyData.analyses?.length, 'analyses');
+          
+          // Mettre à jour les types d'images (mapper par index)
+          if (classifyData.analyses && Array.isArray(classifyData.analyses)) {
+            for (const analysis of classifyData.analyses) {
+              try {
+                const imageIndex = analysis.index;
+                const image = allImages[imageIndex];
+                
+                if (image) {
+                  console.log(`🎨 [AI Auto-Fill] Image ${imageIndex}: ${analysis.type} (${analysis.confidence})`);
+                  await ProductImageService.update(image.id, {
+                    image_type: analysis.type,
+                    ai_confidence: analysis.confidence,
+                    ai_analysis: analysis.reason
+                  });
+                }
+              } catch (error) {
+                console.warn('⚠️ Erreur update image:', error);
+              }
+            }
+          }
+
+          // Supprimer les images "unwanted"
+          const unwantedAnalyses = classifyData.analyses?.filter((a: any) => a.type === 'unwanted') || [];
+          console.log(`🗑️ [AI Auto-Fill] Suppression de ${unwantedAnalyses.length} images unwanted`);
+          
+          for (const analysis of unwantedAnalyses) {
+            try {
+              const imageIndex = analysis.index;
+              const image = allImages[imageIndex];
+              
+              if (image) {
+                await ProductImageService.delete(image.id);
+                console.log(`🗑️ [AI Auto-Fill] Image unwanted supprimée: ${imageIndex}`);
+              }
+            } catch (error) {
+              console.warn('⚠️ Erreur suppression image:', error);
+            }
+          }
+        } else {
+          console.error('❌ [AI Auto-Fill] Erreur classification:', await classifyResponse.text());
+        }
+      }
+
+      // Recompter après classification/suppression
+      allImages = await ProductImageService.getByProductId(product.id);
+      const totalImagesCount = allImages.length;
+
+      // Définir la première image comme featured si aucune
+      const hasFeatured = allImages.some(img => img.is_featured);
+      if (!hasFeatured && allImages.length > 0) {
+        const firstProductImage = allImages.find(img => img.image_type === 'product');
+        const imageToFeature = firstProductImage || allImages[0];
+        await ProductImageService.update(imageToFeature.id, { is_featured: true });
+      }
+
+      // ============================================
+      // 4. MISE À JOUR DES MÉTADONNÉES
+      // ============================================
+      if (metaData.success && metaData.data) {
+        const cleanedData = { ...metaData.data };
+        delete cleanedData.category;
+        
+        const metasCount = Object.keys(cleanedData).filter(key => {
+          const value = cleanedData[key as keyof typeof cleanedData];
+          return value !== null && value !== '' && value !== undefined;
+        }).length;
+
+        const updatedProduct = await ProductService.update(product.id, cleanedData);
+        console.log('✅ [AI Auto-Fill] Produit mis à jour');
+
+        if (updatedProduct) {
+          setProducts(prevProducts => 
+            prevProducts.map(p => 
+              p.id === product.id ? { ...p, ...updatedProduct } : p
+            )
+          );
+        }
+
+        console.log(`📈 [AI Auto-Fill] Résumé: ${totalImagesCount} images, ${metasCount} metas`);
+        return { images: totalImagesCount, metas: metasCount };
+      }
+
+      return { images: totalImagesCount, metas: 0 };
+    } catch (error) {
+      console.error('❌ [AI Auto-Fill] Erreur:', error);
+      throw error;
     }
   }, []);
 
@@ -147,7 +378,7 @@ export default function Home() {
   return (
     <>
       <main className="min-h-screen">
-        <div className="p-4">
+        <div>
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -175,6 +406,7 @@ export default function Home() {
                   console.log('Modification stock:', product.name);
                   // TODO: Ouvrir le wizard de stock
                 }}
+                onAIFill={handleAIFill}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
               />
@@ -184,13 +416,49 @@ export default function Home() {
       </main>
 
       {/* Inspecteur de produit */}
-      {showInspector && selectedProduct && (
+      {showInspector && (
         <ProductInspector
           product={selectedProduct}
           onClose={handleCloseInspector}
           onSubmit={handleUpdateProduct}
           onDelete={handleDeleteProduct}
+          onThumbnailChange={async () => {
+            // Recharger le produit depuis Supabase pour avoir la miniature à jour
+            if (selectedProduct?.id) {
+              const updatedProduct = await ProductService.getById(selectedProduct.id);
+              if (updatedProduct) {
+                setProducts(prevProducts =>
+                  prevProducts.map(p =>
+                    p.id === selectedProduct.id ? updatedProduct : p
+                  )
+                );
+              }
+            }
+          }}
         />
+      )}
+
+      {/* Bouton flottant pour ajouter un produit - Masqué quand l'inspecteur est ouvert */}
+      {!showInspector && (
+        <button
+          onClick={() => {
+            setSelectedProduct(null);
+            setShowInspector(true);
+          }}
+          className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-all duration-200 hover:scale-110 z-50 flex items-center justify-center"
+          title="Ajouter un produit"
+        >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={2}
+          stroke="currentColor"
+          className="w-6 h-6"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+      </button>
       )}
     </>
   );

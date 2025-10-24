@@ -1,4 +1,4 @@
-import { supabase, Product, Category } from './supabase';
+import { supabase, Product, Category, Brand } from './supabase';
 
 // Services pour gérer les produits
 export const ProductService = {
@@ -20,6 +20,22 @@ export const ProductService = {
     return data || [];
   },
 
+  // Récupérer un produit par ID
+  async getById(id: string): Promise<Product | null> {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*, categories(name)')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.warn('⚠️ Erreur lors du chargement du produit:', error);
+      return null;
+    }
+
+    return data;
+  },
+
   // Récupérer un produit par code-barres
   async getByBarcode(barcode: string): Promise<Product | null> {
     const { data, error } = await supabase
@@ -37,16 +53,32 @@ export const ProductService = {
   },
 
   // Créer un nouveau produit
-  async create(product: Omit<Product, 'id' | 'created_at' | 'updated_at'>): Promise<Product | null> {
+  async create(product: Omit<Product, 'created_at' | 'updated_at'> | Omit<Product, 'id' | 'created_at' | 'updated_at'>): Promise<Product | null> {
     console.log('➕ ProductService.create() - Création référence:', product);
+    
+    // ⚠️ IMPORTANT : Nettoyer les champs vides pour éviter les contraintes unique
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cleanProduct: any = { ...product };
+    // 🆕 Accepter un ID pré-généré (utile pour les nouveaux produits avec fetch IA avant sauvegarde)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    console.log('🆔 [ProductService.create] ID fourni:', (product as any).id || 'Non fourni (auto-généré)');
+    if (cleanProduct.barcode === '' || cleanProduct.barcode === null) {
+      delete cleanProduct.barcode;
+      console.log('⚠️ [ProductService.create] Barcode vide retiré');
+    }
+    if (cleanProduct.internal_ref === '' || cleanProduct.internal_ref === null) {
+      delete cleanProduct.internal_ref;
+      console.log('⚠️ [ProductService.create] Internal_ref vide retiré');
+    }
+    
     const { data, error } = await supabase
       .from('products')
-      .insert([product])
+      .insert([cleanProduct])
       .select()
       .single();
 
     if (error) {
-      console.warn('⚠️ Erreur lors de la création du produit:', error);
+      console.error('❌ [ProductService.create] Erreur:', error.message, error.code, error.hint);
       return null;
     }
 
@@ -207,6 +239,118 @@ export const CategoryService = {
     }
 
     return data;
+  },
+};
+
+// Services pour gérer les marques
+export const BrandService = {
+  // Récupérer toutes les marques
+  async getAll(): Promise<Brand[]> {
+    console.log('🏷️ [BrandService.getAll] Début requête');
+    const { data, error } = await supabase
+      .from('brands')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('❌ [BrandService.getAll] Erreur:', error);
+      return [];
+    }
+
+    console.log('✅ [BrandService.getAll] Marques récupérées:', data?.length || 0);
+    return data || [];
+  },
+
+  // Récupérer une marque par ID
+  async getById(id: string): Promise<Brand | null> {
+    const { data, error } = await supabase
+      .from('brands')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.warn('⚠️ [BrandService.getById] Erreur:', error);
+      return null;
+    }
+
+    return data;
+  },
+
+  // Récupérer une marque par slug
+  async getBySlug(slug: string): Promise<Brand | null> {
+    const { data, error } = await supabase
+      .from('brands')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+
+    if (error) {
+      console.warn('⚠️ [BrandService.getBySlug] Erreur:', error);
+      return null;
+    }
+
+    return data;
+  },
+
+  // Créer une nouvelle marque
+  async create(brand: Omit<Brand, 'id' | 'created_at' | 'updated_at'>): Promise<Brand | null> {
+    console.log('➕ [BrandService.create] Création marque:', brand.name);
+    const { data, error } = await supabase
+      .from('brands')
+      .insert([brand])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ [BrandService.create] Erreur:', error);
+      return null;
+    }
+
+    console.log('✅ [BrandService.create] Marque créée:', data.id);
+    return data;
+  },
+
+  // Mettre à jour une marque
+  async update(id: string, updates: Partial<Omit<Brand, 'id' | 'created_at' | 'updated_at'>>): Promise<Brand | null> {
+    console.log('✏️ [BrandService.update] Mise à jour marque:', id);
+    console.log('📝 [BrandService.update] Données:', JSON.stringify(updates, null, 2));
+    
+    const { data, error } = await supabase
+      .from('brands')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ [BrandService.update] Erreur complète:', error);
+      console.error('❌ Code:', error.code);
+      console.error('❌ Message:', error.message);
+      console.error('❌ Détails:', error.details);
+      console.error('❌ Hint:', error.hint);
+      return null;
+    }
+
+    console.log('✅ [BrandService.update] Marque mise à jour:', id);
+    return data;
+  },
+
+  // Supprimer une marque
+  async delete(id: string): Promise<boolean> {
+    console.log('🗑️ [BrandService.delete] Suppression marque:', id);
+    const { error } = await supabase
+      .from('brands')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('❌ [BrandService.delete] Erreur:', error);
+      return false;
+    }
+
+    console.log('✅ [BrandService.delete] Marque supprimée:', id);
+    return true;
   },
 };
 

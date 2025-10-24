@@ -20,6 +20,10 @@ export const FIELD_STATUS_CONFIG: Record<string, FieldStatus> = {
   purchase_price_htva: { functional: true },
   warranty_period: { functional: true },
   
+  // Description et spécifications techniques (fonctionnels)
+  long_description: { functional: true },
+  technical_specifications: { functional: true },
+  
   // Champs en développement (non fonctionnels)
   metadata: { 
     functional: false, 
