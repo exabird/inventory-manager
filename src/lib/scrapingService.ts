@@ -20,14 +20,14 @@ export interface ScrapedProductData {
     height?: number;
   };
   images?: string[];
-  specifications?: Record<string, any>;
+  specifications?: Record<string, string | number | boolean>;
   confidence: number; // Score de confiance de l'IA (0-100)
 }
 
 export interface ScrapingSource {
   type: 'barcode' | 'url' | 'image' | 'manual';
   value: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, string | number | boolean>;
 }
 
 export interface ScrapingResult {
@@ -198,8 +198,8 @@ export class ScrapingService {
   }
 
   // Scraping via APIs externes
-  private async scrapeExternalAPIs(barcode: string): Promise<any> {
-    const results: any[] = [];
+  private async scrapeExternalAPIs(barcode: string): Promise<Record<string, unknown>[]> {
+    const results: Record<string, unknown>[] = [];
 
     // API OpenFoodFacts (gratuite)
     try {
@@ -274,7 +274,7 @@ export class ScrapingService {
 
   // Analyse IA avec Claude
   private async analyzeWithClaude(
-    inputData: any, 
+    inputData: string | Record<string, unknown> | Record<string, unknown>[], 
     inputType: string, 
     inputValue: string
   ): Promise<{
@@ -352,7 +352,7 @@ export class ScrapingService {
   }
 
   // Construction du prompt pour Claude
-  private buildClaudePrompt(inputData: any, inputType: string, inputValue: string, customPrompt?: string): string {
+  private buildClaudePrompt(inputData: string | Record<string, unknown> | Record<string, unknown>[], inputType: string, inputValue: string, customPrompt?: string): string {
     const systemPrompt = customPrompt || `Tu es un expert en analyse de données produit. Analyse les données suivantes et extrais les informations produit de manière structurée.`;
     
     return `${systemPrompt}
