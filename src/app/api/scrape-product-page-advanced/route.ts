@@ -1,10 +1,12 @@
 /**
  * API pour scraper une page produit avec Puppeteer (JavaScript enabled)
  * Gère les onglets dynamiques, lazy loading, et images en JavaScript
+ * Compatible Vercel avec @sparticuz/chromium
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 
 export const runtime = 'nodejs'; // ⚠️ Puppeteer nécessite Node.js runtime
 
@@ -30,16 +32,35 @@ export async function POST(request: NextRequest) {
 
     console.log('🌐 [Scraper Advanced] Début scraping avec Puppeteer de:', url);
 
-    // Lancer le navigateur headless
-    browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-      ]
-    });
+    // Déterminer si on est sur Vercel ou en local
+    const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+    
+    console.log('🔍 [Scraper Advanced] Environnement:', isProduction ? 'Vercel/Production' : 'Local');
+
+    // Lancer le navigateur headless (avec Chromium sur Vercel)
+    if (isProduction) {
+      // Configuration pour Vercel avec @sparticuz/chromium
+      browser = await puppeteer.launch({
+        args: [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
+        defaultViewport: { width: 1920, height: 1080 },
+        executablePath: await chromium.executablePath(),
+        headless: true,
+      });
+      console.log('✅ [Scraper Advanced] Chromium lancé (Vercel)');
+    } else {
+      // Configuration pour développement local avec Puppeteer classique
+      const puppeteerLocal = await import('puppeteer');
+      browser = await puppeteerLocal.default.launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+        ]
+      });
+      console.log('✅ [Scraper Advanced] Puppeteer lancé (Local)');
+    }
 
     const page = await browser.newPage();
 
