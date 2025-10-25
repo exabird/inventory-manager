@@ -416,27 +416,26 @@ export default function Home() {
       </main>
 
       {/* Inspecteur de produit */}
-      {showInspector && (
-        <ProductInspector
-          product={selectedProduct}
-          onClose={handleCloseInspector}
-          onSubmit={handleUpdateProduct}
-          onDelete={handleDeleteProduct}
-          onThumbnailChange={async () => {
-            // Recharger le produit depuis Supabase pour avoir la miniature à jour
-            if (selectedProduct?.id) {
-              const updatedProduct = await ProductService.getById(selectedProduct.id);
-              if (updatedProduct) {
-                setProducts(prevProducts =>
-                  prevProducts.map(p =>
-                    p.id === selectedProduct.id ? updatedProduct : p
-                  )
-                );
-              }
+      <ProductInspector
+        product={selectedProduct}
+        isOpen={showInspector}
+        onClose={handleCloseInspector}
+        onSubmit={handleUpdateProduct}
+        onDelete={handleDeleteProduct}
+        onThumbnailChange={async () => {
+          // Recharger le produit depuis Supabase pour avoir la miniature à jour
+          if (selectedProduct?.id) {
+            const updatedProduct = await ProductService.getById(selectedProduct.id);
+            if (updatedProduct) {
+              setProducts(prevProducts =>
+                prevProducts.map(p =>
+                  p.id === selectedProduct.id ? updatedProduct : p
+                )
+              );
             }
-          }}
-        />
-      )}
+          }
+        }}
+      />
 
       {/* Bouton flottant pour ajouter un produit - Masqué quand l'inspecteur est ouvert */}
       {!showInspector && (

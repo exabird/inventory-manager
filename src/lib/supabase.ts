@@ -144,6 +144,30 @@ export interface Product {
   // Description et spécifications techniques
   long_description: string | null;
   technical_specifications: TechnicalSpecifications | null;
+  // Champs pour compatibilité avec l'ancien code
+  min_stock?: number;
+  price?: number;
+  description?: string;
+}
+
+// Interface pour les formulaires de produits
+export interface ProductFormData {
+  id?: string;
+  name: string;
+  internal_ref?: string;
+  manufacturer: string;
+  manufacturer_ref: string;
+  barcode?: string;
+  brand: string;
+  brand_id: string | null;
+  category_id: string | null;
+  quantity: number;
+  min_stock: number;
+  price: number;
+  description: string;
+  long_description: string;
+  technical_specifications: Record<string, any>;
+  notes: string;
 }
 
 export interface Category {
@@ -166,6 +190,8 @@ export interface Brand {
   ai_fetch_instructions: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
+  // Champs pour compatibilité avec l'ancien code
+  ai_prompt?: string;
 }
 
 export interface ProductHistory {
