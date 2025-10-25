@@ -5,8 +5,16 @@
   "installCommand": "npm install",
   "functions": {
     "src/app/api/**/*": {
+      "maxDuration": 30,
+      "memory": 1024
+    },
+    "src/app/api/scrape-product-page-advanced/route.ts": {
       "maxDuration": 60,
-      "memory": 3008
+      "memory": 1536
+    },
+    "src/app/api/download-images/route.ts": {
+      "maxDuration": 60,
+      "memory": 1536
     }
   }
 }
