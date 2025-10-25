@@ -124,9 +124,16 @@ PRODUIT À RECHERCHER :
 
 ${brandPrompt ? `\n🎯 INSTRUCTIONS SPÉCIFIQUES À LA MARQUE :\n${brandPrompt}\n` : `
 TA MISSION :
-1. Trouve l'URL de la page produit OFFICIELLE sur le site du fabricant
-2. Priorise TOUJOURS les sites officiels (.com, .fr, etc. du fabricant)
-3. Si le fabricant est connu (Sonos, Apple, Samsung, etc.), utilise leur site officiel
+1. Trouve l'URL de la page produit. PRIORISE dans cet ordre :
+   - Site OFFICIEL du fabricant (ex: sonos.com, apple.com)
+   - Si inaccessible, sites commerciaux fiables :
+     * coolblue.be (Belgique, excellentes données + photos)
+     * bol.com (Pays-Bas/Belgique, bonnes photos)
+     * mediamarkt.be (Belgique, photos complètes)
+     * fnac.be (Belgique, bonnes spécifications)
+     * amazon.fr (France, photos étendues)
+2. Évite les sites de revendeurs douteux ou incomplets
+3. Assure-toi que l'URL contient des images produit de qualité
 4. Recherche par le nom exact du produit sur le site du fabricant
 
 EXEMPLES DE SITES OFFICIELS :
@@ -160,8 +167,8 @@ IMPORTANT :
           }]
         });
 
-        const productUrl = urlResponse.content[0].type === 'text' 
-          ? urlResponse.content[0].text.trim() 
+        let productUrl = urlResponse.content[0].type === 'text' 
+          ? urlResponse.content[0].text.trim()
           : '';
         
         debugInfo.details.urlFound = productUrl;
@@ -169,9 +176,74 @@ IMPORTANT :
         
         // Validation de l'URL
         if (!productUrl || !productUrl.startsWith('http')) {
-          debugInfo.error = 'URL invalide ou non trouvée par l\'IA';
-          debugInfo.details.urlReceived = productUrl;
-          throw new Error(`L'IA n'a pas trouvé d'URL valide. Réponse reçue: "${productUrl}"`);
+          console.log('🔄 [Fallback] Site fabricant inaccessible, recherche sur sites commerciaux...');
+          
+          // 🆕 FALLBACK : Recherche sur sites commerciaux
+          const fallbackPrompt = `Tu es un expert en recherche de produits en ligne.
+
+TA MISSION :
+1. Trouve l'URL de la page produit sur un site commercial belge/européen fiable
+2. Priorise ces sites dans l'ordre :
+   - coolblue.be (Belgique, excellentes données produit)
+   - bol.com (Pays-Bas/Belgique, bonnes données)
+   - mediamarkt.be (Belgique, données complètes)
+   - fnac.be (Belgique, bonnes spécifications)
+   - amazon.fr (France, données étendues)
+3. Évite les sites de revendeurs douteux ou incomplets
+
+INFORMATIONS PRODUIT :
+Nom: ${currentData?.name || 'Non fourni'}
+Marque: ${currentData?.brand || currentData?.manufacturer || 'Non fournie'}
+Code-barres: ${currentData?.barcode || 'Non fourni'}
+
+Retourne UNIQUEMENT l'URL complète (https://...) sans aucun texte supplémentaire.
+Si tu ne trouves pas d'URL pertinente, retourne "NOT_FOUND".`;
+
+          try {
+            const fallbackResponse = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01'
+              },
+              body: JSON.stringify({
+                model: model,
+                max_tokens: 100,
+                messages: [
+                  {
+                    role: 'user',
+                    content: fallbackPrompt
+                  }
+                ]
+              })
+            });
+
+            if (fallbackResponse.ok) {
+              const fallbackData = await fallbackResponse.json();
+              const fallbackUrl = fallbackData.content[0].text.trim();
+              
+              if (fallbackUrl && fallbackUrl.startsWith('http')) {
+                productUrl = fallbackUrl;
+                console.log('🔄 [Fallback] URL commerciale trouvée:', productUrl);
+                debugInfo.details.fallbackUsed = true;
+                debugInfo.details.fallbackUrl = productUrl;
+              } else {
+                debugInfo.error = 'URL invalide ou non trouvée par l\'IA (fabricant + commerciaux)';
+                debugInfo.details.urlReceived = productUrl;
+                debugInfo.details.fallbackReceived = fallbackUrl;
+                throw new Error(`L'IA n'a pas trouvé d'URL valide. Fabricant: "${productUrl}", Commerciaux: "${fallbackUrl}"`);
+              }
+            } else {
+              debugInfo.error = 'Erreur lors de la recherche fallback';
+              throw new Error(`Erreur fallback: ${fallbackResponse.status}`);
+            }
+          } catch (fallbackError: any) {
+            debugInfo.error = 'URL invalide ou non trouvée par l\'IA';
+            debugInfo.details.urlReceived = productUrl;
+            debugInfo.details.fallbackError = fallbackError.message;
+            throw new Error(`L'IA n'a pas trouvé d'URL valide. Réponse reçue: "${productUrl}". Erreur fallback: ${fallbackError.message}`);
+          }
         }
 
         // Étape 2 : Scraper la page
@@ -303,7 +375,14 @@ PRODUIT :
 - Code-barres : ${productBarcode || 'Non renseigné'}
 
 TA MISSION :
-Trouve l'URL EXACTE de la page produit sur le site OFFICIEL du fabricant.
+Trouve l'URL EXACTE de la page produit. PRIORISE dans cet ordre :
+1. Site OFFICIEL du fabricant (ex: sonos.com, apple.com)
+2. Si inaccessible, sites commerciaux fiables :
+   - coolblue.be (Belgique, excellentes données)
+   - bol.com (Pays-Bas/Belgique)
+   - mediamarkt.be (Belgique)
+   - fnac.be (Belgique)
+   - amazon.fr (France)
 
 ${brandPrompt ? `\n🎯 INSTRUCTIONS SPÉCIFIQUES À LA MARQUE :\n${brandPrompt}\n` : ''}
 EXEMPLES :
@@ -336,7 +415,7 @@ RÉPONDS UNIQUEMENT avec le JSON, AUCUN texte avant ou après.`;
               .trim();
             
             const urlData = JSON.parse(urlJsonText);
-            const productUrl = urlData.url;
+            let productUrl = urlData.url;
 
             console.log('✅ [Fonction 2] URL trouvée:', productUrl);
 

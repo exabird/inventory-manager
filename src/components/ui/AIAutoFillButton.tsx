@@ -109,19 +109,19 @@ export default function AIAutoFillButton({ step, onClick, className, completeSum
         )}
       </button>
 
-      {/* Label de l'étape (seulement si loading) */}
-      {isLoading && (
+      {/* Label de l'étape (supprimé - maintenant dans le tooltip) */}
+      {/* {isLoading && (
         <span className="text-[11px] leading-tight font-medium text-purple-600 whitespace-nowrap animate-in fade-in slide-in-from-left-2 duration-200 flex items-center h-7">
           {stepLabel}
         </span>
-      )}
+      )} */}
       
-      {/* Label succès avec résumé (reste affiché jusqu'au clic) */}
-      {step === 'complete' && (
+      {/* Label succès avec résumé (supprimé - maintenant dans le tooltip) */}
+      {/* {step === 'complete' && (
         <span className="text-[11px] leading-tight font-medium text-green-600 whitespace-nowrap animate-in fade-in slide-in-from-left-2 duration-200 flex items-center h-7">
           {getSummaryLabel()}
         </span>
-      )}
+      )} */}
     </div>
   );
 }

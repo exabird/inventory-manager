@@ -82,21 +82,24 @@ export async function POST(request: NextRequest) {
 
     const page = await browser.newPage();
 
-    // Bloquer les ressources non essentielles pour économiser la mémoire
+    // Bloquer uniquement les trackers et analytics pour économiser la mémoire
+    // (pas le CSS pour éviter d'être détecté comme bot)
     await page.setRequestInterception(true);
     page.on('request', (req) => {
-      const resourceType = req.resourceType();
       const url = req.url();
       
-      // Bloquer : CSS, fonts, analytics, ads
+      // Bloquer uniquement : analytics, ads, trackers
       if (
-        resourceType === 'stylesheet' ||
-        resourceType === 'font' ||
         url.includes('google-analytics') ||
+        url.includes('googletagmanager') ||
         url.includes('analytics') ||
         url.includes('gtag') ||
-        url.includes('facebook') ||
-        url.includes('doubleclick')
+        url.includes('facebook.com') ||
+        url.includes('doubleclick') ||
+        url.includes('googlesyndication') ||
+        url.includes('hotjar') ||
+        url.includes('segment.com') ||
+        url.includes('mixpanel')
       ) {
         req.abort();
       } else {
@@ -104,9 +107,19 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Définir le viewport et user-agent (viewport réduit pour économiser la mémoire)
+    // Définir le viewport et user-agent réaliste
     await page.setViewport({ width: 1280, height: 720 });
     await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    
+    // Ajouter des headers réalistes pour éviter la détection bot
+    await page.setExtraHTTPHeaders({
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'DNT': '1',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
+    });
 
     console.log('📄 [Scraper Advanced] Navigation vers la page...');
 
