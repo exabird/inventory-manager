@@ -45,8 +45,22 @@ export async function POST(request: NextRequest) {
       console.log('📁 [Scraper Advanced] Chemin Chromium:', executablePath);
       
       browser = await puppeteer.launch({
-        args: chromium.args,
-        defaultViewport: { width: 1920, height: 1080 },
+        args: [
+          ...chromium.args,
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--disable-gpu',
+          '--single-process',
+          '--disable-background-networking',
+          '--disable-default-apps',
+          '--disable-extensions',
+          '--disable-sync',
+          '--metrics-recording-only',
+          '--mute-audio',
+        ],
+        defaultViewport: { width: 1280, height: 720 },
         executablePath: executablePath,
         headless: true,
       });
@@ -68,8 +82,30 @@ export async function POST(request: NextRequest) {
 
     const page = await browser.newPage();
 
-    // Définir le viewport et user-agent
-    await page.setViewport({ width: 1920, height: 1080 });
+    // Bloquer les ressources non essentielles pour économiser la mémoire
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+      const resourceType = req.resourceType();
+      const url = req.url();
+      
+      // Bloquer : CSS, fonts, analytics, ads
+      if (
+        resourceType === 'stylesheet' ||
+        resourceType === 'font' ||
+        url.includes('google-analytics') ||
+        url.includes('analytics') ||
+        url.includes('gtag') ||
+        url.includes('facebook') ||
+        url.includes('doubleclick')
+      ) {
+        req.abort();
+      } else {
+        req.continue();
+      }
+    });
+
+    // Définir le viewport et user-agent (viewport réduit pour économiser la mémoire)
+    await page.setViewport({ width: 1280, height: 720 });
     await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
     console.log('📄 [Scraper Advanced] Navigation vers la page...');
