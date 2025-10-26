@@ -374,3 +374,4 @@ Pour améliorer les performances :
 
 **Le scraper avancé avec Puppeteer récupère maintenant toutes les images disponibles, y compris celles dans les onglets dynamiques ! 🎉**
 
+

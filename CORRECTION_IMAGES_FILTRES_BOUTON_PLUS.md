@@ -274,3 +274,4 @@ Modifier la logique pour que "Toutes" affiche **réellement toutes** les images 
 
 **Les images sont maintenant toujours visibles et le bouton "+" est de retour ! 🎉**
 
+

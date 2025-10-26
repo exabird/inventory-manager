@@ -132,3 +132,4 @@ const mainFields: (keyof ProductFormData)[] = [
 
 **Prêt pour test immédiat !**
 
+

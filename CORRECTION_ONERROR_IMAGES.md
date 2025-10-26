@@ -245,3 +245,4 @@ onError={(e) => {
 
 **Les images sont maintenant toujours visibles, même en cas d'erreur ! 🎉**
 
+

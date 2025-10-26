@@ -306,3 +306,4 @@ console.log(`🎨 [AI Auto-Fill] Classification de ${allImages.length} images...
 
 **La classification IA des images fonctionne maintenant correctement ! 🎉**
 
+

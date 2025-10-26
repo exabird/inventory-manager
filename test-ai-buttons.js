@@ -86,3 +86,4 @@ async function testAIButtons() {
 }
 
 testAIButtons().catch(console.error);
+

@@ -397,3 +397,4 @@ Actuellement, on recharge le produit entier depuis Supabase à chaque changement
 
 **Testez maintenant et confirmez que tout fonctionne ! 🚀**
 
+

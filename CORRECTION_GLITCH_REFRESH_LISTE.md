@@ -175,3 +175,4 @@ Cette approche est appelée **"Optimistic Update"** (mise à jour optimiste) :
 - Feedback instantané
 - Perception de rapidité
 
+

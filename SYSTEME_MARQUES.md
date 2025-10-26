@@ -388,3 +388,4 @@ Le système de marques permet de **guider l'IA** pour améliorer drastiquement l
 
 **Prochaine étape** : Exécuter la migration SQL et tester la page `/brands` !
 
+

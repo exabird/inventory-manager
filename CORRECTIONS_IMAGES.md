@@ -63,3 +63,4 @@ Lors du prochain fetch d'images, vous verrez :
 Aucune modification de schéma BDD requise.
 Prêt pour production immédiate.
 
+

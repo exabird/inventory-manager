@@ -148,3 +148,4 @@ Affiché quand `images.length > 0` mais `filteredImages.length === 0`
 
 3. **Suppression** : La suppression est maintenant **synchronisée** avec la BDD pour éviter tout problème de timing.
 
+

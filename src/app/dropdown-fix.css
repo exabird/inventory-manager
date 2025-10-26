@@ -1,0 +1,19 @@
+/* Fix pour masquer le point noir du DropdownMenuTrigger de Radix UI */
+
+[data-radix-collection-item]::before,
+[data-radix-collection-item]::after,
+button[data-radix-collection-item]::before,
+button[data-radix-collection-item]::after,
+[role="button"]::before,
+[role="button"]::after {
+  display: none !important;
+  content: none !important;
+  visibility: hidden !important;
+}
+
+/* Masquer tous les indicateurs visuels des dropdown triggers */
+[data-state]::before,
+[data-state]::after {
+  display: none !important;
+}
+

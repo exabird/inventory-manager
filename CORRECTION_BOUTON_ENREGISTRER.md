@@ -206,3 +206,4 @@ setState2(structuredClone(data));
 - ❌ Ne copie pas les `Date`, `Map`, `Set`
 - ✅ Parfait pour les objets JSON purs (notre cas)
 
+

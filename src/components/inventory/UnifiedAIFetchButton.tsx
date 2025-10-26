@@ -103,7 +103,7 @@ const UnifiedAIFetchButton: React.FC<UnifiedAIFetchButtonProps> = ({
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen} modal={false}>
         <Tooltip open={shouldShowTooltip ? (isLoading ? true : undefined) : undefined} delayDuration={isLoading ? 0 : 300}>
           <TooltipTrigger asChild>
-            <DropdownMenuTrigger asChild className="[&>button]:after:hidden [&>button]:before:hidden">
+            <DropdownMenuTrigger asChild>
               <Button
                 type="button"
                 variant="ghost"
@@ -111,7 +111,7 @@ const UnifiedAIFetchButton: React.FC<UnifiedAIFetchButtonProps> = ({
                 disabled={disabled || isLoading}
                 className={cn(
                   "h-8 w-8 relative transition-all duration-300",
-                  "after:hidden before:hidden", // Cacher les pseudo-éléments du dropdown
+                  "[&::before]:hidden [&::after]:hidden [&_*::before]:hidden [&_*::after]:hidden", // Masquer TOUS les pseudo-éléments
                   isLoading && "bg-purple-50 shadow-sm scale-110 cursor-wait",
                   progress.step === 'error' && "bg-red-50",
                   progress.step === 'complete' && "bg-green-50 shadow-sm",

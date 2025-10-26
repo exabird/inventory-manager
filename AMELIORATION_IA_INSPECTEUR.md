@@ -293,3 +293,4 @@ Fetch depuis liste → Ouvrir inspecteur → ✅ Données à jour en temps réel
 **Décision** : En pause pour une feature suivante
 **Priorité** : Basse (nice-to-have)
 
+

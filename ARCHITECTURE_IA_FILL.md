@@ -137,3 +137,4 @@ cp .backups/20251024_045503/ProductInspector.tsx.backup src/components/inventory
 **Version** : 0.1.34
 **Statut** : Architecture stable et fonctionnelle ✅
 
+

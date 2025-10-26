@@ -51,3 +51,4 @@ console.log('✨ Si le tooltip ne s\'affiche toujours pas, vérifiez:');
 console.log('   - Que le serveur Next.js a redémarré');
 console.log('   - Que les composants Radix UI sont bien installés');
 console.log('   - Que le CSS des tooltips est chargé');
+

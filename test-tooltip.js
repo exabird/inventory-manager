@@ -31,3 +31,4 @@ console.log('   - Timestamps formatés en français');
 console.log('   - Design moderne avec ombres et bordures');
 console.log('');
 console.log('🚀 Le tooltip est maintenant opérationnel !');
+

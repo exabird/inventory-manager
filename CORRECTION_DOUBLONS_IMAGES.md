@@ -256,3 +256,4 @@ const handleBatchAIFill = async () => {
 2. **Option 2** : Edge Function Supabase
 3. **Alternative** : File d'attente séquentielle
 
+

@@ -36,7 +36,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Product, Category, TechnicalSpecifications, supabase } from '@/lib/supabase';
+import { Product, Category } from '@/lib/supabase';
 import { CategoryService } from '@/lib/services';
 import Tabs, { TabContent } from '@/components/ui/Tabs';
 import ImageUploader from '@/components/inventory/ImageUploaderSquare';
@@ -45,12 +45,7 @@ import ProductThumbnail from '@/components/inventory/ProductThumbnail';
 import { ProductImage } from '@/lib/productImageService';
 import { ProductDetectionService } from '@/lib/productDetectionService';
 import StockTab from '@/components/inventory/StockTab';
-import TechnicalSpecsEditor from '@/components/inventory/TechnicalSpecsEditor';
 import UnifiedAIFetchButton, { AIFetchMode, AIFetchProgress } from './UnifiedAIFetchButton';
-import AILabelWithButton from '@/components/ui/AILabelWithButton';
-import BrandSelector from './BrandSelector';
-import CategorySelector from './CategorySelector';
-import RichTextEditor from '@/components/ui/RichTextEditor';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -80,10 +75,6 @@ interface ProductFormData {
   warranty_period: string | null;
   min_stock_required: boolean | null;
   min_stock_quantity: number | null;
-  // Descriptions
-  long_description: string | null;
-  // Spécifications techniques
-  technical_specifications: TechnicalSpecifications | null;
   // Métadonnées étendues
   metadata: {
     supplier?: string | null;
@@ -143,15 +134,7 @@ export default function ProductInspector({
   const [showImageGallery, setShowImageGallery] = useState(false);
   
   // États pour le bouton IA
-  const [aiProgress, setAiProgress] = useState<AIFetchProgress>({ 
-    mode: 'all', 
-    step: 'idle', 
-    message: '', 
-    completedSteps: [], 
-    metasCount: 0, 
-    imagesCount: 0 
-  });
-  const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
+  const [aiProgress, setAiProgress] = useState<AIFetchProgress>({ mode: 'metas', step: 'idle', message: '' });
   const [isAILoading, setIsAILoading] = useState(false);
   const [formData, setFormData] = useState<ProductFormData>({
     barcode: barcode || product?.barcode || '',
@@ -165,13 +148,11 @@ export default function ProductInspector({
         manufacturer_ref: product?.manufacturer_ref || '',
         brand: product?.brand || '',
         short_description: product?.short_description || '',
-        long_description: product?.long_description || '',
         selling_price_htva: product?.selling_price_htva || null,
         purchase_price_htva: product?.purchase_price_htva || null,
         warranty_period: product?.warranty_period || '',
         min_stock_required: product?.min_stock_required || false,
         min_stock_quantity: product?.min_stock_quantity || 0,
-    technical_specifications: product?.technical_specifications || null,
     metadata: {
       supplier: (product?.metadata as any)?.supplier || '',
       location: (product?.metadata as any)?.location || '',
@@ -228,13 +209,11 @@ export default function ProductInspector({
         manufacturer_ref: product.manufacturer_ref || '',
         brand: product.brand || '',
         short_description: product.short_description || '',
-        long_description: product.long_description || '',
         selling_price_htva: product.selling_price_htva || null,
         purchase_price_htva: product.purchase_price_htva || null,
         warranty_period: product.warranty_period || '',
         min_stock_required: product.min_stock_required || false,
         min_stock_quantity: product.min_stock_quantity || 0,
-        technical_specifications: product.technical_specifications || null,
         metadata: {
           supplier: (product.metadata as any)?.supplier || '',
           location: (product.metadata as any)?.location || '',
@@ -381,26 +360,13 @@ export default function ProductInspector({
     }));
   };
 
-  // Gestion du remplissage IA pour un champ individuel
-  const handleAIFieldFill = (fieldKey: string) => (value: any) => {
-    console.log(`🌟 [handleAIFieldFill] Remplissage du champ ${fieldKey}:`, value);
-    
-    // Marquer le champ comme rempli par IA
-    setAiFilledFields(prev => new Set(prev).add(fieldKey));
-    
-    // Mettre à jour le champ dans formData
-    setFormData(prev => ({
-      ...prev,
-      [fieldKey]: value
-    }));
-    
-    setHasChanges(true);
-  };
-
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
     
-    // ✅ Seul le nom est obligatoire
+    if (!formData.internal_ref || formData.internal_ref.trim() === '') {
+      errors.internal_ref = 'La référence interne est requise';
+    }
+    
     if (!formData.name || formData.name.trim() === '') {
       errors.name = 'Le nom du produit est requis';
     }
@@ -509,7 +475,7 @@ export default function ProductInspector({
       // 1. REMPLISSAGE MÉTADONNÉES (si mode metas ou all)
       // ============================================
       if (mode === 'metas' || mode === 'all') {
-        setAiProgress(prev => ({ ...prev, mode, step: 'fetching_metas', message: 'Recherche des informations...', metasCount: 0, imagesCount: 0 }));
+        setAiProgress({ mode, step: 'fetching_metas', message: 'Recherche des informations...' });
         console.log('📝 [UnifiedAIFetch] Étape 1 : Remplissage métadonnées...');
         
         const metaResponse = await fetch('/api/ai-fill', {
@@ -538,9 +504,6 @@ export default function ProductInspector({
         const metaData = await metaResponse.json();
         console.log('✅ [UnifiedAIFetch] Métadonnées récupérées:', metaData.data);
         
-        // Marquer fetching_metas comme complété
-        setAiProgress(prev => ({ ...prev, completedSteps: [...(prev.completedSteps || []), 'fetching_metas'] }));
-        
         // Mettre à jour les données du formulaire avec les données IA
         if (metaData.success && metaData.data) {
           const cleanedData = { ...metaData.data };
@@ -550,51 +513,6 @@ export default function ProductInspector({
           const fieldsToUpdate: Partial<ProductFormData> = {};
           let metasCount = 0;
 
-          // Gérer la marque spécialement (brand_id)
-          if (cleanedData.brand && !formData.brand) {
-            const brandName = cleanedData.brand;
-            console.log('🏷️ [UnifiedAIFetch] Marque trouvée par IA:', brandName);
-            
-            // Chercher ou créer la marque dans la DB
-            try {
-              const { data: existingBrand } = await supabase
-                .from('brands')
-                .select('id, name')
-                .ilike('name', brandName)
-                .single();
-
-              if (existingBrand) {
-                // Marque existe déjà
-                console.log('✅ [UnifiedAIFetch] Marque existante:', existingBrand.name);
-                (fieldsToUpdate as any).brand_id = existingBrand.id;
-                fieldsToUpdate.brand = existingBrand.name;
-                metasCount++;
-              } else {
-                // Créer nouvelle marque
-                console.log('➕ [UnifiedAIFetch] Création nouvelle marque:', brandName);
-                const { data: newBrand, error } = await supabase
-                  .from('brands')
-                  .insert([{ name: brandName }])
-                  .select('id, name')
-                  .single();
-
-                if (!error && newBrand) {
-                  console.log('✅ [UnifiedAIFetch] Marque créée:', newBrand.name);
-                  (fieldsToUpdate as any).brand_id = newBrand.id;
-                  fieldsToUpdate.brand = newBrand.name;
-                  metasCount++;
-                } else {
-                  console.error('❌ [UnifiedAIFetch] Erreur création marque:', error);
-                }
-              }
-            } catch (error) {
-              console.error('❌ [UnifiedAIFetch] Erreur recherche marque:', error);
-            }
-            
-            delete cleanedData.brand; // Retirer brand des cleanedData pour éviter duplication
-          }
-
-          // Traiter les autres champs
           Object.entries(cleanedData).forEach(([key, value]) => {
             const currentValue = formData[key as keyof ProductFormData];
             if ((!currentValue || currentValue === '') && value) {
@@ -618,19 +536,9 @@ export default function ProductInspector({
       // 2. RÉCUPÉRATION IMAGES (si mode images ou all)
       // ============================================
       if (mode === 'images' || mode === 'all') {
-        // Étape 1 : Recherche URL
-        setAiProgress(prev => ({ ...prev, mode, step: 'finding_url', message: 'Recherche URL du produit...', completedSteps: mode === 'all' ? ['fetching_metas'] : [] }));
+        setAiProgress({ mode, step: 'fetching_images', message: 'Récupération des images...' });
         console.log('📸 [UnifiedAIFetch] Étape 2 : Récupération images...');
 
-        // Simuler les transitions d'étapes pour meilleure UX
-        // L'API /api/ai-fill (images_only) fait tout en interne
-        await new Promise(resolve => setTimeout(resolve, 500)); // Afficher "Recherche URL"
-        
-        setAiProgress(prev => ({ ...prev, step: 'scraping_page', completedSteps: [...(prev.completedSteps || []), 'finding_url'] }));
-        await new Promise(resolve => setTimeout(resolve, 300)); // Afficher "Scraping"
-        
-        setAiProgress(prev => ({ ...prev, step: 'downloading_images', completedSteps: [...(prev.completedSteps || []), 'scraping_page'] }));
-        
         const imagesResponse = await fetch('/api/ai-fill', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -656,9 +564,6 @@ export default function ProductInspector({
         const imagesData = await imagesResponse.json();
         console.log('✅ [UnifiedAIFetch] Images récupérées:', imagesData.supabaseImages?.length || 0);
         
-        // Marquer downloading_images comme complété
-        setAiProgress(prev => ({ ...prev, completedSteps: [...(prev.completedSteps || []), 'downloading_images'] }));
-        
         // Classifier les images si nécessaire
         if (imagesData.supabaseImages && imagesData.supabaseImages.length > 0 && product?.id) {
           // Recharger les images depuis la BDD
@@ -666,7 +571,6 @@ export default function ProductInspector({
           let allImages = await ProductImageService.getByProductId(product.id);
           
           if (allImages.length > 0) {
-            setAiProgress(prev => ({ ...prev, step: 'classifying_images', completedSteps: [...(prev.completedSteps || []), 'downloading_images'] }));
             console.log('🎨 [UnifiedAIFetch] Classification de', allImages.length, 'images...');
             
             const classifyResponse = await fetch('/api/classify-images', {
@@ -700,7 +604,6 @@ export default function ProductInspector({
           setAiProgress(prev => ({ ...prev, imagesCount: allImages.length }));
           
           // Configurer l'image principale si nécessaire
-          setAiProgress(prev => ({ ...prev, step: 'setting_featured', completedSteps: [...(prev.completedSteps || []), 'classifying_images'] }));
           const hasFeatured = allImages.some(img => img.is_featured);
           if (!hasFeatured && allImages.length > 0) {
             const firstProductImage = allImages.find(img => img.image_type === 'product');
@@ -716,21 +619,18 @@ export default function ProductInspector({
         }
       }
 
-      setAiProgress(prev => ({ 
-        ...prev, 
-        step: 'complete', 
-        message: 'Terminé !'
-      }));
+      setAiProgress({ mode, step: 'complete', message: 'Terminé !' });
       console.log('✅ [UnifiedAIFetch] Fetch IA terminé avec succès');
       
     } catch (error: any) {
       console.error('❌ [UnifiedAIFetch] Erreur fetch IA:', error);
-      setAiProgress(prev => ({ ...prev, step: 'error', message: error.message || 'Erreur lors du fetch IA' }));
+      setAiProgress({ mode, step: 'error', message: error.message || 'Erreur lors du fetch IA' });
       alert(`❌ Erreur lors du fetch IA: ${error.message}`);
     } finally {
       setIsAILoading(false);
-      // Ne PAS réinitialiser pour garder le résumé visible
-      // L'utilisateur peut toujours hover pour voir le dernier résultat
+      setTimeout(() => {
+        setAiProgress({ mode: 'all', step: 'idle', message: '' });
+      }, 2000);
     }
   };
 
@@ -816,52 +716,34 @@ export default function ProductInspector({
                   </div>
 
                   {/* Référence fabricant */}
-                  <div className="space-y-2">
-                    <AILabelWithButton
-                      htmlFor="manufacturer_ref"
-                      fieldKey="manufacturer_ref"
-                      fieldLabel="Référence fabricant"
-                      productName={formData.name}
-                      productBarcode={formData.barcode || undefined}
-                      isAIGenerated={aiFilledFields.has('manufacturer_ref')}
-                      onFillComplete={handleAIFieldFill('manufacturer_ref')}
-                    >
-                      Référence fabricant
-                    </AILabelWithButton>
-                    <Input
-                      id="manufacturer_ref"
-                      value={formData.manufacturer_ref || ''}
-                      onChange={(e) => handleInputChange('manufacturer_ref', e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="REF-FAB-001"
-                      className="h-10"
-                    />
-                  </div>
+                  <FunctionalInput
+                    id="manufacturer_ref"
+                    label="Référence fabricant"
+                    value={formData.manufacturer_ref || ''}
+                    onChange={(e) => handleInputChange('manufacturer_ref', e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="REF-FAB-001"
+                    status={getFieldStatus('manufacturer_ref')}
+                  />
 
                   {/* Référence interne */}
                   <FunctionalInput
                     id="internal_ref"
-                    label="Référence interne"
+                    label="Référence interne *"
                     value={formData.internal_ref || ''}
                     onChange={(e) => handleInputChange('internal_ref', e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="REF-INT-001"
                     status={getFieldStatus('internal_ref')}
+                    error={validationErrors.internal_ref}
                   />
 
                   {/* Code-barres */}
                   <div className="space-y-2">
-                    <AILabelWithButton
-                      htmlFor="barcode"
-                      icon={<Barcode className="h-4 w-4" />}
-                      fieldKey="barcode"
-                      fieldLabel="Code-barres (EAN)"
-                      productName={formData.name}
-                      isAIGenerated={aiFilledFields.has('barcode')}
-                      onFillComplete={handleAIFieldFill('barcode')}
-                    >
+                    <Label htmlFor="barcode" className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <Barcode className="h-4 w-4" />
                       Code-barres (SKU)
-                    </AILabelWithButton>
+                    </Label>
                     <div className="relative">
                       <Input
                         id="barcode"
@@ -886,32 +768,17 @@ export default function ProductInspector({
 
                   {/* Marque */}
             <div className="space-y-2">
-                    <AILabelWithButton
-                      htmlFor="brand"
-                      icon={<Building2 className="h-4 w-4" />}
-                      fieldKey="brand"
-                      fieldLabel="Marque"
-                      productName={formData.name}
-                      productBarcode={formData.barcode || undefined}
-                      isAIGenerated={aiFilledFields.has('brand')}
-                      onFillComplete={(value: string) => {
-                        handleAIFieldFill('brand')(value);
-                      }}
-                    >
+                    <Label htmlFor="brand" className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <Building2 className="h-4 w-4" />
                       Marque
-                    </AILabelWithButton>
-              <BrandSelector
-                      value={(formData as any).brand_id || null}
-                      brandName={formData.brand || null}
-                      onChange={(brandId: string | null, brandName: string) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          brand: brandName,
-                          brand_id: brandId
-                        } as any));
-                        setHasChanges(true);
-                      }}
+                    </Label>
+              <Input
+                      id="brand"
+                      value={formData.brand || ''}
+                      onChange={(e) => handleInputChange('brand', e.target.value)}
                       onKeyDown={handleKeyDown}
+                      placeholder="Apple, Samsung, etc."
+                      className="h-10"
               />
             </div>
 
@@ -921,33 +788,34 @@ export default function ProductInspector({
                       <Tag className="h-4 w-4" />
                       Catégorie
                     </Label>
-                    <CategorySelector
-                      value={formData.category_id || null}
-                      onChange={(categoryId: string | null, categoryName: string) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          category_id: categoryId
-                        }));
-                        setHasChanges(true);
-                      }}
-                      onKeyDown={handleKeyDown}
-                    />
+                    {isLoadingCategories ? (
+                      <div className="flex items-center justify-center py-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      </div>
+                    ) : (
+                      <select
+                        id="category_id"
+                        value={formData.category_id || ''}
+                        onChange={(e) => handleInputChange('category_id', e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Aucune catégorie</option>
+                        {categories.map((cat) => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
 
                   {/* Description courte */}
                   <div className="col-span-2 space-y-2">
-                    <AILabelWithButton
-                      htmlFor="short_description"
-                      icon={<FileText className="h-4 w-4" />}
-                      fieldKey="short_description"
-                      fieldLabel="Description courte"
-                      productName={formData.name}
-                      productBarcode={formData.barcode || undefined}
-                      isAIGenerated={aiFilledFields.has('short_description')}
-                      onFillComplete={handleAIFieldFill('short_description')}
-                    >
+                    <Label htmlFor="short_description" className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <FileText className="h-4 w-4" />
                       Description courte
-                    </AILabelWithButton>
+                    </Label>
                     <textarea
                       id="short_description"
                       value={formData.short_description || ''}
@@ -959,41 +827,12 @@ export default function ProductInspector({
               />
             </div>
 
-                  {/* Description longue */}
-                  <div className="col-span-2 space-y-2">
-                    <AILabelWithButton
-                      htmlFor="long_description"
-                      icon={<FileText className="h-4 w-4" />}
-                      fieldKey="long_description"
-                      fieldLabel="Description longue (WYSIWYG)"
-                      productName={formData.name}
-                      productBarcode={formData.barcode || undefined}
-                      isAIGenerated={aiFilledFields.has('long_description')}
-                      onFillComplete={handleAIFieldFill('long_description')}
-                    >
-                      Description longue (WYSIWYG)
-                    </AILabelWithButton>
-                    <RichTextEditor
-                      value={formData.long_description || ''}
-                      onChange={(value) => handleInputChange('long_description', value)}
-                      placeholder="Description détaillée du produit avec mise en forme..."
-                    />
-                  </div>
-
                   {/* Période de garantie */}
             <div className="space-y-2">
-                    <AILabelWithButton
-                      htmlFor="warranty_period"
-                      icon={<Calendar className="h-4 w-4" />}
-                      fieldKey="warranty_period"
-                      fieldLabel="Période de garantie"
-                      productName={formData.name}
-                      productBarcode={formData.barcode || undefined}
-                      isAIGenerated={aiFilledFields.has('warranty_period')}
-                      onFillComplete={handleAIFieldFill('warranty_period')}
-                    >
+                    <Label htmlFor="warranty_period" className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <Calendar className="h-4 w-4" />
                       Période de garantie
-                    </AILabelWithButton>
+                    </Label>
               <Input
                       id="warranty_period"
                       value={formData.warranty_period || ''}
@@ -1001,8 +840,8 @@ export default function ProductInspector({
                       onKeyDown={handleKeyDown}
                       placeholder="2 ans, 24 mois, etc."
                       className="h-10"
-              />
-            </div>
+                    />
+                  </div>
                 </div>
             </div>
 
@@ -1117,13 +956,69 @@ export default function ProductInspector({
       case 'specs':
         return (
           <TabContent>
-            <TechnicalSpecsEditor
-              value={formData.technical_specifications}
-              onChange={(specs) => setFormData(prev => ({ ...prev, technical_specifications: specs }))}
-              isAIGenerated={false}
-              productName={formData.name}
-              productBarcode={formData.barcode || undefined}
-            />
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Poids */}
+            <div className="space-y-2">
+                  <Label htmlFor="weight" className="flex items-center gap-1.5">
+                    <Ruler className="h-3.5 w-3.5" />
+                    Poids (kg)
+                  </Label>
+              <Input
+                    id="weight"
+                    type="number"
+                    step="0.001"
+                    value={formData.metadata?.weight || ''}
+                    onChange={(e) => handleMetadataChange('weight', parseFloat(e.target.value))}
+                    placeholder="0.0"
+              />
+            </div>
+
+                {/* Dimensions */}
+            <div className="space-y-2">
+                  <Label htmlFor="dimensions">Dimensions</Label>
+              <Input
+                    id="dimensions"
+                    value={formData.metadata?.dimensions || ''}
+                    onChange={(e) => handleMetadataChange('dimensions', e.target.value)}
+                    placeholder="L x l x h"
+              />
+                      </div>
+
+                {/* Couleur */}
+            <div className="space-y-2">
+                  <Label htmlFor="color">Couleur</Label>
+              <Input
+                    id="color"
+                    value={formData.metadata?.color || ''}
+                    onChange={(e) => handleMetadataChange('color', e.target.value)}
+                    placeholder="Ex: Rouge"
+              />
+            </div>
+
+                {/* Matériau */}
+            <div className="space-y-2">
+                  <Label htmlFor="material">Matériau</Label>
+              <Input
+                    id="material"
+                    value={formData.metadata?.material || ''}
+                    onChange={(e) => handleMetadataChange('material', e.target.value)}
+                    placeholder="Ex: Plastique"
+              />
+            </div>
+
+                {/* Certifications */}
+                <div className="col-span-2 space-y-2">
+                  <Label htmlFor="certifications">Certifications</Label>
+                  <Input
+                    id="certifications"
+                    value={formData.metadata?.certifications || ''}
+                    onChange={(e) => handleMetadataChange('certifications', e.target.value)}
+                    placeholder="Ex: CE, FCC"
+                  />
+          </div>
+              </div>
+            </div>
           </TabContent>
         );
 

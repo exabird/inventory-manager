@@ -79,6 +79,55 @@ Consultez ces fichiers pour comprendre le projet :
 - **État actuel** : `SYNTHESE_RESTRUCTURATION.md`
 - **Bugs connus** : `PROBLEMES_CORRIGES.md`
 - **Règles Cursor** : `.cursor/rules/*.mdc`
+- **Features Checklist** : `FEATURES_CHECKLIST.md` ⚠️ **OBLIGATOIRE avant modification de ProductInspector**
+
+## 🔒 Protection Anti-Régression
+
+**AVANT toute modification de ProductInspector.tsx :**
+
+1. **Lire FEATURES_CHECKLIST.md** - Connaître les features actuelles
+2. **Vérifier le nombre de lignes**
+   ```bash
+   wc -l inventory-app/src/components/inventory/ProductInspector.tsx
+   # Référence actuelle : ~1400 lignes (±100)
+   ```
+3. **Si perte > 100 lignes** : STOP et investiguer
+4. **Créer un backup daté** avant modifications majeures
+   ```bash
+   cp src/components/inventory/ProductInspector.tsx src/components/inventory/ProductInspector.tsx.backup-$(date +%Y%m%d-%H%M)
+   ```
+
+**APRÈS modification :**
+
+1. **Vérifier la checklist** - Aucune feature supprimée ?
+2. **Tests obligatoires**
+   ```bash
+   npm run type-check  # 0 erreur
+   npm run build:check # Build réussi
+   ```
+3. **Test visuel** - Tous les onglets accessibles ?
+
+**Script de vérification rapide :**
+
+```bash
+# Exécuter avant commit
+./scripts/check-features.sh
+
+# Ou manuellement
+cd inventory-app
+grep -c "AILabelWithButton\|TechnicalSpecsEditor" src/components/inventory/ProductInspector.tsx
+# Doit retourner au moins 1 (idéalement 3+)
+```
+
+### ⚠️ Signaux d'alerte
+
+Si vous observez lors de modifications :
+- ❌ Lignes < 1300 → Investigation requise
+- ❌ Imports < 25 → Des composants ont été supprimés  
+- ❌ Erreurs TypeScript → Stop immédiatement
+- ❌ Un onglet ne s'affiche plus → Vérifier renderTabContent()
+
+➡️ **Action : Restaurer depuis le dernier backup fonctionnel**
 
 ## 🏗️ Architecture Simplifiée
 

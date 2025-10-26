@@ -1,0 +1,194 @@
+  // Fonction de gestion du fetch IA unifié
+  const handleUnifiedAIFetch = async (mode: AIFetchMode) => {
+    try {
+      console.log('🤖 [UnifiedAIFetch] Début fetch IA en mode:', mode);
+      setIsAILoading(true);
+      
+      // Vérifier qu'il y a au moins un nom
+      if (!formData.name || formData.name.trim() === '') {
+        throw new Error('Veuillez saisir au moins un nom de produit');
+      }
+      
+      // Récupérer la clé API et le modèle depuis les paramètres sauvegardés
+      const savedSettings = localStorage.getItem('ai_settings');
+      let apiKey = null;
+      let model = 'claude-sonnet-4-20250514';
+      
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        apiKey = settings.claudeApiKey;
+        model = settings.model || model;
+      }
+      
+      if (!apiKey) {
+        alert('⚠️ Clé API Anthropic non configurée. Allez dans Paramètres pour la configurer.');
+        setAiProgress({ mode, step: 'error', message: 'Clé API non configurée' });
+        setIsAILoading(false);
+        return;
+      }
+      
+      console.log('🔑 [UnifiedAIFetch] Clé API récupérée depuis les paramètres');
+      
+      // ============================================
+      // 1. REMPLISSAGE MÉTADONNÉES (si mode metas ou all)
+      // ============================================
+      if (mode === 'metas' || mode === 'all') {
+        setAiProgress({ mode, step: 'fetching_metas', message: 'Recherche des informations...' });
+        console.log('📝 [UnifiedAIFetch] Étape 1 : Remplissage métadonnées...');
+        
+        const metaResponse = await fetch('/api/ai-fill', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productData: {
+              id: product?.id,
+              name: formData.name,
+              brand: formData.brand,
+              brand_id: (formData as any).brand_id,
+              manufacturer: formData.manufacturer,
+              barcode: formData.barcode,
+              manufacturer_ref: formData.manufacturer_ref
+            },
+            apiKey,
+            model
+          })
+        });
+
+        if (!metaResponse.ok) {
+          const errorData = await metaResponse.json();
+          throw new Error(errorData.error || 'Erreur lors du remplissage des métadonnées');
+        }
+
+        const metaData = await metaResponse.json();
+        console.log('✅ [UnifiedAIFetch] Métadonnées récupérées:', metaData.data);
+        
+        // Mettre à jour les données du formulaire avec les données IA
+        if (metaData.success && metaData.data) {
+          const cleanedData = { ...metaData.data };
+          delete cleanedData.category; // Ne pas inclure category
+          
+          // Filtrer pour ne garder QUE les champs vides
+          const fieldsToUpdate: Partial<ProductFormData> = {};
+          let metasCount = 0;
+
+          Object.entries(cleanedData).forEach(([key, value]) => {
+            const currentValue = formData[key as keyof ProductFormData];
+            if ((!currentValue || currentValue === '') && value) {
+              fieldsToUpdate[key as keyof ProductFormData] = value as any;
+              metasCount++;
+            }
+          });
+
+          if (Object.keys(fieldsToUpdate).length > 0) {
+            setFormData(prev => ({ ...prev, ...fieldsToUpdate }));
+            setAiProgress(prev => ({ ...prev, metasCount }));
+            setHasChanges(true);
+            console.log(`✅ [UnifiedAIFetch] ${metasCount} champ(s) rempli(s)`);
+          } else {
+            console.log('ℹ️ [UnifiedAIFetch] Aucun champ vide à remplir');
+          }
+        }
+      }
+
+      // ============================================
+      // 2. RÉCUPÉRATION IMAGES (si mode images ou all)
+      // ============================================
+      if (mode === 'images' || mode === 'all') {
+        setAiProgress({ mode, step: 'fetching_images', message: 'Récupération des images...' });
+        console.log('📸 [UnifiedAIFetch] Étape 2 : Récupération images...');
+
+        const imagesResponse = await fetch('/api/ai-fill', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productData: {
+              id: product?.id,
+              name: formData.name,
+              brand: formData.brand,
+              manufacturer: formData.manufacturer,
+              barcode: formData.barcode
+            },
+            images_only: true,
+            apiKey,
+            model
+          })
+        });
+
+        if (!imagesResponse.ok) {
+          const errorData = await imagesResponse.json();
+          throw new Error(errorData.error || 'Erreur lors de la récupération des images');
+        }
+
+        const imagesData = await imagesResponse.json();
+        console.log('✅ [UnifiedAIFetch] Images récupérées:', imagesData.supabaseImages?.length || 0);
+        
+        // Classifier les images si nécessaire
+        if (imagesData.supabaseImages && imagesData.supabaseImages.length > 0 && product?.id) {
+          // Recharger les images depuis la BDD
+          const { ProductImageService } = await import('@/lib/productImageService');
+          let allImages = await ProductImageService.getByProductId(product.id);
+          
+          if (allImages.length > 0) {
+            console.log('🎨 [UnifiedAIFetch] Classification de', allImages.length, 'images...');
+            
+            const classifyResponse = await fetch('/api/classify-images', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                imageUrls: allImages.map(img => img.url),
+                productName: formData.name,
+                apiKey,
+                model,
+                filterType: 'all'
+              })
+            });
+
+            if (classifyResponse.ok) {
+              const classifyData = await classifyResponse.json();
+              console.log('✅ [UnifiedAIFetch] Classification terminée');
+
+              // Supprimer les images "unwanted"
+              for (const analysis of classifyData.analyses || []) {
+                if (analysis.type === 'unwanted' && allImages[analysis.index]) {
+                  await ProductImageService.delete(allImages[analysis.index].id);
+                  console.log(`🗑️ [UnifiedAIFetch] Image unwanted supprimée: ${analysis.index}`);
+                }
+              }
+            }
+          }
+          
+          // Recompter après classification
+          allImages = await ProductImageService.getByProductId(product.id);
+          setAiProgress(prev => ({ ...prev, imagesCount: allImages.length }));
+          
+          // Configurer l'image principale si nécessaire
+          const hasFeatured = allImages.some(img => img.is_featured);
+          if (!hasFeatured && allImages.length > 0) {
+            const firstProductImage = allImages.find(img => img.image_type === 'product');
+            const imageToFeature = firstProductImage || allImages[0];
+            await ProductImageService.update(imageToFeature.id, { is_featured: true });
+            
+            if (onThumbnailChange) {
+              onThumbnailChange();
+            }
+          }
+          
+          console.log(`✅ [UnifiedAIFetch] ${allImages.length} image(s) traitée(s)`);
+        }
+      }
+
+      setAiProgress({ mode, step: 'complete', message: 'Terminé !' });
+      console.log('✅ [UnifiedAIFetch] Fetch IA terminé avec succès');
+      
+    } catch (error: any) {
+      console.error('❌ [UnifiedAIFetch] Erreur fetch IA:', error);
+      setAiProgress({ mode, step: 'error', message: error.message || 'Erreur lors du fetch IA' });
+      alert(`❌ Erreur lors du fetch IA: ${error.message}`);
+    } finally {
+      setIsAILoading(false);
+      setTimeout(() => {
+        setAiProgress({ mode: 'all', step: 'idle', message: '' });
+      }, 2000);
+    }
+  };
+
