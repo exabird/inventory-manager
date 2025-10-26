@@ -228,24 +228,41 @@ export async function POST(request: NextRequest) {
         }
         
         if (src && src.startsWith('http') && src.length > 20) { // URL complète avec au moins 20 caractères
-          // Filtrer les petites images (icônes, logos)
+          // Filtrer les petites images (icônes, logos, badges)
           const width = (elem as HTMLImageElement).naturalWidth || parseInt(elem.getAttribute('width') || '0');
           const height = (elem as HTMLImageElement).naturalHeight || parseInt(elem.getAttribute('height') || '0');
-          const alt = elem.getAttribute('alt') || '';
+          const alt = (elem.getAttribute('alt') || '').toLowerCase();
+          const srcLower = src.toLowerCase();
           
-          // Accepter si :
-          // - Dimensions > 100px OU
-          // - Pas de dimensions définies OU
-          // - Alt contient des mots-clés produit
-          const isProductImage =
-            (width > 100 || height > 100 || (!width && !height)) &&
-            !src.includes('icon') &&
-            !src.includes('logo') &&
-            !src.includes('sprite') &&
-            !alt.toLowerCase().includes('logo');
+          // ⚠️ FILTRE STRICT : Images > 400px minimum (photos produit réelles)
+          // Exclure : icônes, logos, badges, sprites, thumbnails
+          const minSize = 400;
+          const hasGoodSize = (width >= minSize && height >= minSize) || (!width && !height); // Si pas de dimensions, on vérifie l'URL
+          
+          // Patterns à exclure dans l'URL et l'alt
+          const excludePatterns = [
+            'icon', 'logo', 'sprite', 'badge', 'button', 'banner',
+            'thumb', 'thumbnail', 'small', 'mini', 'tiny',
+            'feature-', 'spec-', 'tag-', 'chip-',
+            '/icons/', '/logos/', '/badges/', '/sprites/',
+            'arrow', 'close', 'menu', 'search', 'cart',
+            'social', 'payment', 'delivery', 'shipping'
+          ];
+          
+          const hasExcludedPattern = excludePatterns.some(pattern => 
+            srcLower.includes(pattern) || alt.includes(pattern)
+          );
+          
+          // Accepter uniquement les grandes images sans patterns exclus
+          const isProductImage = hasGoodSize && !hasExcludedPattern;
           
           if (isProductImage) {
-            imageUrls.add(src); // Garder l'URL complète avec paramètres (important pour CDN)
+            // Stocker avec les dimensions pour tri ultérieur
+            imageUrls.add(JSON.stringify({ 
+              url: src, 
+              width: width || 9999, 
+              height: height || 9999 
+            }));
           }
         }
       });
@@ -253,7 +270,19 @@ export async function POST(request: NextRequest) {
       return Array.from(imageUrls);
     });
 
-    console.log('🖼️ [Scraper Advanced] Images trouvées:', images.length);
+    // Parser les JSONs et trier par taille (priorité aux grandes images = photos produit)
+    const parsedImages = images.map(json => JSON.parse(json as string));
+    const sortedImages = parsedImages.sort((a, b) => {
+      const areaA = a.width * a.height;
+      const areaB = b.width * b.height;
+      return areaB - areaA; // Plus grandes en premier
+    });
+    
+    // Limiter à 25 images maximum
+    const MAX_IMAGES = 25;
+    const limitedImages = sortedImages.slice(0, MAX_IMAGES).map(img => img.url);
+
+    console.log('✅ [Scraper Advanced] Images extraites:', images.length, '→ Filtrées et limitées à:', limitedImages.length);
 
     if (images.length > 0) {
       console.log('🖼️ [Scraper Advanced] Première image:', images[0]);
@@ -283,7 +312,7 @@ export async function POST(request: NextRequest) {
 
     const result: ScrapedContent = {
       html: html,
-      images: images,
+      images: limitedImages, // ✅ Images filtrées (taille min 400px) et limitées (max 25)
       title: pageTitle,
       sections: [] // Non implémenté pour le moment
     };

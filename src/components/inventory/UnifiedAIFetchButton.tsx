@@ -15,15 +15,17 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import AIFetchTimeline from './AIFetchTimeline';
 
 export type AIFetchMode = 'metas' | 'images' | 'all';
 
 export interface AIFetchProgress {
   mode: AIFetchMode;
-  step: 'idle' | 'fetching_metas' | 'fetching_images' | 'complete' | 'error';
+  step: 'idle' | 'fetching_metas' | 'fetching_images' | 'finding_url' | 'scraping_page' | 'downloading_images' | 'classifying_images' | 'setting_featured' | 'complete' | 'error';
   message?: string;
   metasCount?: number;
   imagesCount?: number;
+  completedSteps?: string[];
 }
 
 interface UnifiedAIFetchButtonProps {
@@ -80,19 +82,28 @@ const UnifiedAIFetchButton: React.FC<UnifiedAIFetchButtonProps> = ({
 
   const getTooltipContent = () => {
     const stepLabel = getStepLabel(progress.step, progress.mode);
-    const summary = progress.step === 'complete' && (progress.metasCount || progress.imagesCount) 
-      ? `\n\nRésumé:\n${progress.metasCount ? `• ${progress.metasCount} métadonnées` : ''}${progress.imagesCount ? `\n• ${progress.imagesCount} images` : ''}`
+    
+    // Afficher le résumé si des données ont été récupérées (pendant ou après le process)
+    const hasCounts = progress.metasCount || progress.imagesCount;
+    const summary = hasCounts
+      ? `\n\n${progress.step === 'complete' ? 'Résumé' : 'En cours'}:\n${progress.metasCount ? `• ${progress.metasCount} métadonnée${progress.metasCount > 1 ? 's' : ''}` : ''}${progress.imagesCount ? `\n• ${progress.imagesCount} image${progress.imagesCount > 1 ? 's' : ''}` : ''}`
       : '';
     
     return `${stepLabel}${summary}`;
   };
 
+  // Afficher le tooltip UNIQUEMENT si en cours ou si on a des résultats
+  const hasResults = progress.step === 'complete' || progress.step === 'error' || (progress.completedSteps && progress.completedSteps.length > 0);
+  
+  // Ne PAS afficher en mode idle sans résultats
+  const shouldShowTooltip = (isLoading || hasResults) && progress.step !== 'idle';
+
   return (
     <div className={cn("relative inline-flex items-center", className)}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-            <DropdownMenuTrigger asChild>
+      <DropdownMenu open={isOpen} onOpenChange={setIsOpen} modal={false}>
+        <Tooltip open={shouldShowTooltip ? (isLoading ? true : undefined) : undefined} delayDuration={isLoading ? 0 : 300}>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild className="[&>button]:after:hidden [&>button]:before:hidden">
               <Button
                 type="button"
                 variant="ghost"
@@ -100,7 +111,8 @@ const UnifiedAIFetchButton: React.FC<UnifiedAIFetchButtonProps> = ({
                 disabled={disabled || isLoading}
                 className={cn(
                   "h-8 w-8 relative transition-all duration-300",
-                  isLoading && "pointer-events-none bg-purple-50 shadow-sm scale-110",
+                  "after:hidden before:hidden", // Cacher les pseudo-éléments du dropdown
+                  isLoading && "bg-purple-50 shadow-sm scale-110 cursor-wait",
                   progress.step === 'error' && "bg-red-50",
                   progress.step === 'complete' && "bg-green-50 shadow-sm",
                   !isLoading && progress.step === 'idle' && "hover:bg-purple-50 hover:shadow-sm"
@@ -143,57 +155,53 @@ const UnifiedAIFetchButton: React.FC<UnifiedAIFetchButtonProps> = ({
                 )}
               </Button>
             </DropdownMenuTrigger>
-            
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem 
-                onClick={() => handleModeSelect('metas')}
-                className="flex items-center gap-2"
-              >
-                <FileText className="h-4 w-4 text-blue-600" />
-                <div>
-                  <div className="font-medium">Métadonnées uniquement</div>
-                  <div className="text-xs text-gray-500">Remplit les champs vides</div>
-                </div>
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem 
-                onClick={() => handleModeSelect('images')}
-                className="flex items-center gap-2"
-              >
-                <Image className="h-4 w-4 text-green-600" />
-                <div>
-                  <div className="font-medium">Images uniquement</div>
-                  <div className="text-xs text-gray-500">Télécharge et classe les images</div>
-                </div>
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem 
-                onClick={() => handleModeSelect('all')}
-                className="flex items-center gap-2"
-              >
-                <Zap className="h-4 w-4 text-purple-600" />
-                <div>
-                  <div className="font-medium">Métadonnées + Images</div>
-                  <div className="text-xs text-gray-500">Fetch complet séquentiel</div>
-                </div>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </TooltipTrigger>
-        
-        <TooltipContent className="max-w-xs p-3 bg-white shadow-lg rounded-lg border border-gray-200">
-          <div className="text-sm font-medium text-gray-800 whitespace-pre-wrap">
-            {getTooltipContent()}
-          </div>
-          {progress.message && (
-            <div className="text-xs text-red-500 mt-1 whitespace-pre-wrap">
-              {progress.message}
+          </TooltipTrigger>
+          
+          <TooltipContent className="max-w-sm p-0 bg-white shadow-xl rounded-lg border border-gray-200">
+            <div className="p-3">
+              <AIFetchTimeline progress={progress} />
             </div>
-          )}
-        </TooltipContent>
-      </Tooltip>
+          </TooltipContent>
+        </Tooltip>
+        
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem 
+            onClick={() => handleModeSelect('metas')}
+            className="flex items-center gap-2"
+          >
+            <FileText className="h-4 w-4 text-blue-600" />
+            <div>
+              <div className="font-medium">Métadonnées uniquement</div>
+              <div className="text-xs text-gray-500">Remplit les champs vides</div>
+            </div>
+          </DropdownMenuItem>
+          
+          <DropdownMenuItem 
+            onClick={() => handleModeSelect('images')}
+            className="flex items-center gap-2"
+          >
+            <Image className="h-4 w-4 text-green-600" />
+            <div>
+              <div className="font-medium">Images uniquement</div>
+              <div className="text-xs text-gray-500">Télécharge et classe les images</div>
+            </div>
+          </DropdownMenuItem>
+          
+          <DropdownMenuItem 
+            onClick={() => handleModeSelect('all')}
+            className="flex items-center gap-2"
+          >
+            <Zap className="h-4 w-4 text-purple-600" />
+            <div>
+              <div className="font-medium">Métadonnées + Images</div>
+              <div className="text-xs text-gray-500">Fetch complet séquentiel</div>
+            </div>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 };
 
 export default UnifiedAIFetchButton;
+

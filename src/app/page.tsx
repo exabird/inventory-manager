@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Package, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { Product } from '@/lib/supabase';
 import { ProductService } from '@/lib/services';
 import CompactProductList from '@/components/inventory/CompactProductList';
@@ -376,7 +377,7 @@ export default function Home() {
   });
 
   return (
-    <>
+    <TooltipProvider>
       <main className="min-h-screen">
         <div>
           {isLoading ? (
@@ -459,6 +460,6 @@ export default function Home() {
         </svg>
       </button>
       )}
-    </>
+    </TooltipProvider>
   );
 }
